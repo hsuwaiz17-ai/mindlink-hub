@@ -7,6 +7,7 @@ import SummarySettings from "@/components/dashboard/SummarySettings";
 import SummaryResult from "@/components/dashboard/SummaryResult";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useSummarize } from "@/hooks/useSummarize";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -19,6 +20,7 @@ const Index = () => {
   
   const { settings, updateSettings } = useUserSettings();
   const { summarize, isLoading } = useSummarize();
+  const { user } = useAuth();
 
   // Convert image to base64 when selected
   useEffect(() => {
@@ -34,9 +36,43 @@ const Index = () => {
     }
   }, [selectedImage]);
 
+  // Upload image to Supabase Storage
+  const uploadImageToStorage = async (file: File): Promise<string | null> => {
+    if (!user) return null;
+
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from("document-images")
+        .upload(fileName, file);
+
+      if (error) {
+        console.error("Error uploading image:", error);
+        return null;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from("document-images")
+        .getPublicUrl(data.path);
+
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      return null;
+    }
+  };
+
   const handleSummarize = async () => {
     if (!content && !imageBase64) {
       toast.error("Please enter some content or upload an image");
+      return;
+    }
+
+    if (!user) {
+      toast.error("Please sign in to summarize content");
       return;
     }
 
@@ -50,60 +86,88 @@ const Index = () => {
     if (result) {
       setSummary(result);
       
-      // Save to database if user is logged in
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          // Create document
-          const { data: doc, error: docError } = await supabase
-            .from("documents")
-            .insert({
-              user_id: user.id,
-              original_content: content || "Image content",
-              input_type: imageBase64 ? "image" : "text",
-              title: content?.slice(0, 50) || "Untitled Document",
-            })
-            .select()
-            .single();
+        // Upload image to storage if present
+        let imageUrl: string | null = null;
+        if (selectedImage) {
+          imageUrl = await uploadImageToStorage(selectedImage);
+        }
 
-          if (doc && !docError) {
-            setCurrentDocId(doc.id);
-            
-            // Create summary
-            await supabase.from("summaries").insert({
+        // Determine input type
+        const inputType = imageBase64 ? "image" : "text";
+
+        // Create document in database
+        const { data: doc, error: docError } = await supabase
+          .from("documents")
+          .insert({
+            user_id: user.id,
+            original_content: content || null,
+            input_type: inputType,
+            title: content?.slice(0, 50) || "Untitled Document",
+            image_url: imageUrl,
+          })
+          .select()
+          .single();
+
+        if (docError) {
+          console.error("Error creating document:", docError);
+          toast.error("Failed to save document");
+          return;
+        }
+
+        if (doc) {
+          setCurrentDocId(doc.id);
+          
+          // Create summary linked to document
+          const { error: summaryError } = await supabase
+            .from("summaries")
+            .insert({
               doc_id: doc.id,
               summary_text: result,
               summary_type: settings.aiModel,
             });
+
+          if (summaryError) {
+            console.error("Error creating summary:", summaryError);
+            toast.error("Failed to save summary");
+          } else {
+            toast.success("Document and summary saved successfully");
           }
         }
       } catch (error) {
         console.error("Error saving to database:", error);
+        toast.error("Failed to save to database");
       }
     }
   };
 
   const handleExportComplete = async (url: string, type: "pdf" | "image") => {
-    if (!currentDocId) return;
+    if (!currentDocId || !user) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        // Get the summary for this document
-        const { data: summaryData } = await supabase
-          .from("summaries")
-          .select("id")
-          .eq("doc_id", currentDocId)
-          .single();
+      // Get the summary for this document
+      const { data: summaryData, error: fetchError } = await supabase
+        .from("summaries")
+        .select("id")
+        .eq("doc_id", currentDocId)
+        .single();
 
-        if (summaryData) {
-          await supabase
-            .from("summaries")
-            .update({
-              export_type: type,
-              export_url: url,
-            })
-            .eq("id", summaryData.id);
+      if (fetchError) {
+        console.error("Error fetching summary:", fetchError);
+        return;
+      }
+
+      if (summaryData) {
+        const { error: updateError } = await supabase
+          .from("summaries")
+          .update({
+            export_type: type,
+            export_url: url,
+          })
+          .eq("id", summaryData.id);
+
+        if (updateError) {
+          console.error("Error updating export URL:", updateError);
         }
       }
     } catch (error) {
