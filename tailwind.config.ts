@@ -46,6 +46,11 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+          hover: "hsl(var(--card-hover))",
+        },
+        icon: {
+          primary: "hsl(var(--icon-primary))",
+          secondary: "hsl(var(--icon-secondary))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
@@ -57,6 +62,10 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      boxShadow: {
+        'card': '0 1px 3px 0 hsl(var(--shadow-card) / 0.05), 0 1px 2px -1px hsl(var(--shadow-card) / 0.05)',
+        'card-hover': '0 10px 25px -5px hsl(var(--shadow-card) / 0.1), 0 8px 10px -6px hsl(var(--shadow-card) / 0.08)',
       },
       borderRadius: {
         lg: "var(--radius)",
