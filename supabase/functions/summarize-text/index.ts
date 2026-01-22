@@ -61,9 +61,9 @@ Deno.serve(async (req) => {
 });
 
 async function summarizeWithGemini(content: string, language: string, imageBase64?: string): Promise<string> {
-  const apiKey = Deno.env.get("Gemini_API_Key");
+  const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) {
-    throw new Error("Gemini API key not configured");
+    throw new Error("Gemini API key not configured. Please add GEMINI_API_KEY to your Supabase secrets.");
   }
 
   const prompt = `You are an expert summarizer. Summarize the following content in ${language} language. 
@@ -86,7 +86,7 @@ Provide a clear, concise, and well-structured summary.`;
   }
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
