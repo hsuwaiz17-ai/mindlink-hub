@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// Lovable AI Gateway powered summarization
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,14 +33,9 @@ Deno.serve(async (req) => {
 
     let summary: string;
 
-    // Default to Gemini if no model specified or invalid model
-    if (aiModel === "gpt-4o") {
-      // GPT-4o uses Lovable AI Gateway
-      summary = await summarizeWithLovableGateway(content, language, imageBase64);
-    } else {
-      // Default to Gemini Pro (handles "gemini-pro" or any other value)
-      summary = await summarizeWithGemini(content, language, imageBase64);
-    }
+    // Use Lovable AI Gateway for all models
+    const model = aiModel === "gpt-4o" ? "openai/gpt-5" : "google/gemini-3-flash-preview";
+    summary = await summarizeWithLovableGateway(content, language, imageBase64, model);
 
     console.log(`Summary generated successfully, length: ${summary.length}`);
 
@@ -58,77 +53,16 @@ Deno.serve(async (req) => {
   }
 });
 
-async function summarizeWithGemini(content: string, language: string, imageBase64?: string): Promise<string> {
-  const apiKey = Deno.env.get("GEMINI_API_KEY");
-  if (!apiKey) {
-    throw new Error("Gemini API key not configured. Please add GEMINI_API_KEY to your Supabase secrets.");
-  }
 
-  const prompt = `You are an expert summarizer. Summarize the following content in ${language} language. 
-Use proper formatting with Markdown. If there are mathematical formulas or scientific concepts, use LaTeX notation (e.g., $E = mc^2$ for inline or $$\\int_a^b f(x)dx$$ for block equations).
-
-Content to summarize:
-${content || "Please analyze the provided image and summarize its content."}
-
-Provide a clear, concise, and well-structured summary.`;
-
-  const parts: any[] = [{ text: prompt }];
-
-  if (imageBase64) {
-    parts.push({
-      inline_data: {
-        mime_type: "image/jpeg",
-        data: imageBase64,
-      },
-    });
-  }
-
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 2048,
-        },
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const errorData = await response.text();
-    console.error("Gemini API error:", errorData);
-    
-    // Parse error to provide better user feedback
-    try {
-      const errorJson = JSON.parse(errorData);
-      if (errorJson.error?.code === 429) {
-        throw new Error("Gemini API quota exceeded. Please try using GPT-4o model instead, or wait a few minutes and try again.");
-      }
-    } catch (parseError) {
-      // If parsing fails, use generic error
-    }
-    
-    throw new Error("Failed to get response from Gemini. Please try using GPT-4o model instead.");
-  }
-
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!text) {
-    throw new Error("No summary generated from Gemini");
-  }
-
-  return text;
-}
-
-async function summarizeWithLovableGateway(content: string, language: string, imageBase64?: string): Promise<string> {
+async function summarizeWithLovableGateway(
+  content: string, 
+  language: string, 
+  imageBase64?: string,
+  model: string = "google/gemini-3-flash-preview"
+): Promise<string> {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) {
-    throw new Error("OpenAI API key not configured");
+    throw new Error("LOVABLE_API_KEY is not configured");
   }
 
   const prompt = `You are an expert summarizer. Summarize the following content in ${language} language. 
@@ -159,6 +93,8 @@ Provide a clear, concise, and well-structured summary.`;
     });
   }
 
+  console.log(`Calling Lovable AI Gateway with model: ${model}`);
+
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -166,7 +102,7 @@ Provide a clear, concise, and well-structured summary.`;
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
+      model,
       messages,
       max_tokens: 2048,
       temperature: 0.7,
@@ -175,15 +111,23 @@ Provide a clear, concise, and well-structured summary.`;
 
   if (!response.ok) {
     const errorData = await response.text();
-    console.error("OpenAI API error:", errorData);
-    throw new Error("Failed to get response from OpenAI");
+    console.error("Lovable AI Gateway error:", response.status, errorData);
+    
+    if (response.status === 429) {
+      throw new Error("Rate limit exceeded. Please try again in a moment.");
+    }
+    if (response.status === 402) {
+      throw new Error("AI usage limit reached. Please add credits to continue.");
+    }
+    
+    throw new Error("Failed to get AI response. Please try again.");
   }
 
   const data = await response.json();
   const text = data.choices?.[0]?.message?.content;
 
   if (!text) {
-    throw new Error("No summary generated from OpenAI");
+    throw new Error("No summary generated");
   }
 
   return text;
