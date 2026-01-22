@@ -103,7 +103,18 @@ Provide a clear, concise, and well-structured summary.`;
   if (!response.ok) {
     const errorData = await response.text();
     console.error("Gemini API error:", errorData);
-    throw new Error("Failed to get response from Gemini");
+    
+    // Parse error to provide better user feedback
+    try {
+      const errorJson = JSON.parse(errorData);
+      if (errorJson.error?.code === 429) {
+        throw new Error("Gemini API quota exceeded. Please try using GPT-4o model instead, or wait a few minutes and try again.");
+      }
+    } catch (parseError) {
+      // If parsing fails, use generic error
+    }
+    
+    throw new Error("Failed to get response from Gemini. Please try using GPT-4o model instead.");
   }
 
   const data = await response.json();
