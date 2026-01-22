@@ -168,7 +168,7 @@ Provide a clear, concise, and well-structured summary.`;
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "openai/gpt-4o",
+      model: "google/gemini-3-flash-preview",
       messages,
       max_tokens: 2048,
       temperature: 0.7,
