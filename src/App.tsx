@@ -3,8 +3,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Settings from "./pages/Settings";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -12,25 +16,37 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Index />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/auth" element={<Auth />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/auth" element={<Auth />} />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

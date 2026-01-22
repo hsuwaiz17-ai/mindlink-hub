@@ -115,10 +115,12 @@ export type Database = {
       user_settings: {
         Row: {
           ai_model_preference: string | null
+          font_size: string | null
           is_biometric_enabled: boolean | null
           is_private_profile: boolean | null
           language: string | null
           notification_enabled: boolean | null
+          security_preferences: Json | null
           summary_language: string | null
           theme: string | null
           updated_at: string | null
@@ -126,10 +128,12 @@ export type Database = {
         }
         Insert: {
           ai_model_preference?: string | null
+          font_size?: string | null
           is_biometric_enabled?: boolean | null
           is_private_profile?: boolean | null
           language?: string | null
           notification_enabled?: boolean | null
+          security_preferences?: Json | null
           summary_language?: string | null
           theme?: string | null
           updated_at?: string | null
@@ -137,10 +141,12 @@ export type Database = {
         }
         Update: {
           ai_model_preference?: string | null
+          font_size?: string | null
           is_biometric_enabled?: boolean | null
           is_private_profile?: boolean | null
           language?: string | null
           notification_enabled?: boolean | null
+          security_preferences?: Json | null
           summary_language?: string | null
           theme?: string | null
           updated_at?: string | null
