@@ -33,15 +33,13 @@ Deno.serve(async (req) => {
 
     let summary: string;
 
-    if (aiModel === "gemini-pro") {
-      summary = await summarizeWithGemini(content, language, imageBase64);
-    } else if (aiModel === "gpt-4o") {
-      summary = await summarizeWithOpenAI(content, language, imageBase64);
+    // Default to Gemini if no model specified or invalid model
+    if (aiModel === "gpt-4o") {
+      // GPT-4o uses Lovable AI Gateway
+      summary = await summarizeWithLovableGateway(content, language, imageBase64);
     } else {
-      return new Response(
-        JSON.stringify({ error: "Invalid AI model specified" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // Default to Gemini Pro (handles "gemini-pro" or any other value)
+      summary = await summarizeWithGemini(content, language, imageBase64);
     }
 
     console.log(`Summary generated successfully, length: ${summary.length}`);
@@ -127,7 +125,7 @@ Provide a clear, concise, and well-structured summary.`;
   return text;
 }
 
-async function summarizeWithOpenAI(content: string, language: string, imageBase64?: string): Promise<string> {
+async function summarizeWithLovableGateway(content: string, language: string, imageBase64?: string): Promise<string> {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) {
     throw new Error("OpenAI API key not configured");
