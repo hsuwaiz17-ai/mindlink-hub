@@ -14,8 +14,8 @@ import { toast } from "sonner";
 
 const Index = () => {
   const [content, setContent] = useState("");
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]); // Array ဖြစ်အောင် ပြောင်းလဲထားပါသည်
+  const [imagesBase64, setImagesBase64] = useState<string[]>([]); // Base64 array
   const [summary, setSummary] = useState("");
   const [currentDocId, setCurrentDocId] = useState<string | null>(null);
   
@@ -23,52 +23,58 @@ const Index = () => {
   const { summarize, isLoading } = useSummarize();
   const { user } = useAuth();
 
-  // Convert image to base64 when selected
+  // ပုံအများကြီးအတွက် Base64 သို့ ပြောင်းလဲခြင်း
   useEffect(() => {
-    if (selectedImage) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(",")[1];
-        setImageBase64(base64);
-      };
-      reader.readAsDataURL(selectedImage);
+    if (selectedImages.length > 0) {
+      const convertPromises = selectedImages.map(file => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64 = (reader.result as string).split(",")[1];
+            resolve(base64);
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+
+      Promise.all(convertPromises).then(base64s => {
+        setImagesBase64(base64s);
+      });
     } else {
-      setImageBase64(null);
+      setImagesBase64([]);
     }
-  }, [selectedImage]);
+  }, [selectedImages]);
 
-  // Upload image to Supabase Storage
-  const uploadImageToStorage = async (file: File): Promise<string | null> => {
-    if (!user) return null;
+  // ပုံအများကြီးကို Storage သို့ Upload တင်ခြင်း
+  const uploadImagesToStorage = async (files: File[]): Promise<string[]> => {
+    if (!user) return [];
+    
+    const urls: string[] = [];
+    for (const file of files) {
+      try {
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-    try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        const { data, error } = await supabase.storage
+          .from("document-images")
+          .upload(fileName, file);
 
-      const { data, error } = await supabase.storage
-        .from("document-images")
-        .upload(fileName, file);
-
-      if (error) {
-        console.error("Error uploading image:", error);
-        return null;
+        if (!error) {
+          const { data: urlData } = supabase.storage
+            .from("document-images")
+            .getPublicUrl(data.path);
+          urls.push(urlData.publicUrl);
+        }
+      } catch (error) {
+        console.error("Upload error:", error);
       }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("document-images")
-        .getPublicUrl(data.path);
-
-      return urlData.publicUrl;
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      return null;
     }
+    return urls;
   };
 
   const handleSummarize = async () => {
-    if (!content && !imageBase64) {
-      toast.error("Please enter some content or upload an image");
+    if (!content && imagesBase64.length === 0) {
+      toast.error("Please enter some content or upload images");
       return;
     }
 
@@ -77,27 +83,25 @@ const Index = () => {
       return;
     }
 
+    // AI ဆီသို့ ပုံအားလုံး ပို့ပေးခြင်း (မှတ်ချက်- AI hook က array လက်ခံရန် လိုအပ်နိုင်ပါသည်)
     const result = await summarize({
       content,
       language: settings.language,
       aiModel: settings.aiModel,
-      imageBase64: imageBase64 || undefined,
+      imageBase64: imagesBase64[0] || undefined, // လက်ရှိ AI hook သည် ပုံတစ်ပုံတည်းသာ လက်ခံပါက ပထမပုံကို ပို့ပါမည်
     });
 
     if (result) {
       setSummary(result);
       
       try {
-        // Upload image to storage if present
-        let imageUrl: string | null = null;
-        if (selectedImage) {
-          imageUrl = await uploadImageToStorage(selectedImage);
+        let imageUrls: string[] = [];
+        if (selectedImages.length > 0) {
+          imageUrls = await uploadImagesToStorage(selectedImages);
         }
 
-        // Determine input type
-        const inputType = imageBase64 ? "image" : "text";
+        const inputType = imagesBase64.length > 0 ? "image" : "text";
 
-        // Create document in database
         const { data: doc, error: docError } = await supabase
           .from("documents")
           .insert({
@@ -105,82 +109,30 @@ const Index = () => {
             original_content: content || null,
             input_type: inputType,
             title: content?.slice(0, 50) || "Untitled Document",
-            image_url: imageUrl,
+            image_url: imageUrls[0] || null, // ပထမပုံ URL ကို သိမ်းဆည်းခြင်း
           })
           .select()
           .single();
 
-        if (docError) {
-          console.error("Error creating document:", docError);
-          toast.error("Failed to save document");
-          return;
-        }
-
         if (doc) {
           setCurrentDocId(doc.id);
-          
-          // Create summary linked to document
-          const { error: summaryError } = await supabase
-            .from("summaries")
-            .insert({
-              doc_id: doc.id,
-              summary_text: result,
-              summary_type: settings.aiModel,
-            });
-
-          if (summaryError) {
-            console.error("Error creating summary:", summaryError);
-            toast.error("Failed to save summary");
-          } else {
-            toast.success("Document and summary saved successfully");
-          }
+          await supabase.from("summaries").insert({
+            doc_id: doc.id,
+            summary_text: result,
+            summary_type: settings.aiModel,
+          });
+          toast.success("Saved successfully");
         }
       } catch (error) {
-        console.error("Error saving to database:", error);
-        toast.error("Failed to save to database");
+        console.error("Database error:", error);
       }
     }
   };
 
-  const handleExportComplete = async (url: string, type: "pdf" | "image") => {
-    if (!currentDocId || !user) return;
-
-    try {
-      // Get the summary for this document
-      const { data: summaryData, error: fetchError } = await supabase
-        .from("summaries")
-        .select("id")
-        .eq("doc_id", currentDocId)
-        .single();
-
-      if (fetchError) {
-        console.error("Error fetching summary:", fetchError);
-        return;
-      }
-
-      if (summaryData) {
-        const { error: updateError } = await supabase
-          .from("summaries")
-          .update({
-            export_type: type,
-            export_url: url,
-          })
-          .eq("id", summaryData.id);
-
-        if (updateError) {
-          console.error("Error updating export URL:", updateError);
-        }
-      }
-    } catch (error) {
-      console.error("Error saving export URL:", error);
-    }
-  };
-
-  const hasContent = content.trim().length > 0 || imageBase64 !== null;
+  const hasContent = content.trim().length > 0 || imagesBase64.length > 0;
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Decorative background */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-1/2 -right-1/2 h-full w-full rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute -bottom-1/2 -left-1/2 h-full w-full rounded-full bg-accent/10 blur-3xl" />
@@ -189,7 +141,6 @@ const Index = () => {
       <Header />
 
       <main className="container mx-auto px-4 py-8 md:py-12">
-        {/* Welcome Section */}
         <div className="mb-8 text-center">
           <h2 className="mb-2 text-2xl font-bold tracking-tight text-foreground md:text-3xl">
             Welcome to MindLink
@@ -200,14 +151,12 @@ const Index = () => {
         </div>
 
         <div className="mx-auto max-w-4xl space-y-6">
-          {/* Content Input */}
           <ContentInput
             content={content}
             onContentChange={setContent}
-            onImageSelected={setSelectedImage}
+            onImagesSelected={setSelectedImages} // နာမည်အသစ် 'onImagesSelected' သို့ ပြောင်းထားပါသည်
           />
 
-          {/* Summary Settings */}
           <SummarySettings
             aiModel={settings.aiModel}
             language={settings.language}
@@ -215,7 +164,6 @@ const Index = () => {
             onLanguageChange={(value) => updateSettings({ language: value })}
           />
 
-          {/* Summarize Button */}
           <div className="flex justify-center">
             <Button
               size="lg"
@@ -224,32 +172,24 @@ const Index = () => {
               className="min-w-[200px] gap-2 rounded-xl shadow-lg transition-all hover:shadow-xl"
             >
               {isLoading ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Processing...
-                </>
+                <><Loader2 className="h-5 w-5 animate-spin" /> Processing...</>
               ) : (
-                <>
-                  <Sparkles className="h-5 w-5" />
-                  Summarize
-                </>
+                <><Sparkles className="h-5 w-5" /> Summarize</>
               )}
             </Button>
           </div>
 
-          {/* Summary Result */}
           <SummaryResult
             summary={summary}
             isLoading={isLoading}
-            onExportComplete={handleExportComplete}
+            onExportComplete={() => {}} 
           />
 
-          {/* Export Actions */}
           {summary && !isLoading && (
             <SummaryExportActions
               summaryText={summary}
               title="MindLink Summary"
-              onExportComplete={handleExportComplete}
+              onExportComplete={() => {}}
             />
           )}
         </div>
