@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react"; // lazy နဲ့ Suspense ထည့်သွင်းပါ
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import ProtectedRoute from "./components/ProtectedRoute";
 
-// Page များကို Lazy Load လုပ်ရန် ပြောင်းလဲခြင်း
+// Pages with Dynamic Imports for Performance
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Settings = lazy(() => import("./pages/Settings"));
@@ -16,12 +16,20 @@ const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient();
+// Query Client setup to avoid re-renders
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-// Loading ဖြစ်နေစဉ် ပြသမည့် ရိုးရှင်းသော Component
+// Optimized Page Loader
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-background">
-    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+    <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent shadow-md"></div>
   </div>
 );
 
@@ -29,12 +37,10 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
         <BrowserRouter>
-          {/* Suspense ဖြင့် Route များကို ပတ်ထားပါ */}
           <Suspense fallback={<PageLoader />}>
             <Routes>
+              {/* Home Route */}
               <Route
                 path="/"
                 element={
@@ -43,7 +49,11 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+
+              {/* Authentication */}
               <Route path="/auth" element={<Auth />} />
+
+              {/* Private Routes */}
               <Route
                 path="/settings"
                 element={
@@ -60,12 +70,18 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+
+              {/* Static Pages */}
               <Route path="/terms-of-service" element={<TermsOfService />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+
+              {/* 404 Page */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </BrowserRouter>
+        <Toaster />
+        <Sonner />
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>
