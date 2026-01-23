@@ -385,32 +385,27 @@ const Settings = () => {
               </div>
             </div>
           </div>
-        </section>
-        {/* App Ownership Section */}
-        <div className="mt-12 pt-8 border-t border-border text-center space-y-3 pb-8">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-            Developed & Owned by
+          </section>
+
+      {/* App Ownership Section */}
+      <div className="mt-12 pt-8 border-t border-muted text-center space-y-2 mb-8">
+        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+          Developed & Owned by
+        </p>
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-semibold text-foreground">
+            Arkar Kyaw (2025-MIIT-ECE-050)
           </p>
-          <div className="flex flex-col gap-1">
-            <p className="text-sm font-semibold text-foreground">
-              Arkar Kyaw (2025-MIIT-ECE-050)
-            </p>
-            <p className="text-sm font-semibold text-foreground">
-              & Hsu Wai Zin (UCSMG-25019)
-            </p>
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-4 italic">
-            © 2025 MindLink. All Rights Reserved.
+          <p className="text-sm font-semibold text-foreground">
+            & Hsu Wai Zin (UCSMG-25019)
           </p>
         </div>
-      </main>
-    </div>
-  );
-};
-
-export default Settings;
-      </main>
-    </div>
+        <p className="text-[10px] text-muted-foreground mt-4 italic">
+          © 2025 MindLink. All Rights Reserved.
+        </p>
+      </div>
+    </main>
+  </div>
   );
 };
 
