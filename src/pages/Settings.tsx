@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Moon, Sun, Monitor, Type, Globe, FileText, Shield, Trash2, UserX } from "lucide-react";
+import { ArrowLeft, Moon, Sun, Monitor, Type, Globe, FileText, Shield, Trash2, UserX, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -25,6 +25,7 @@ import {
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const FONT_SIZES = [
   { value: "small", label: "Small" },
@@ -46,6 +47,33 @@ const Settings = () => {
   const { theme, setTheme } = useTheme();
   const [isClearing, setIsClearing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserEmail(user?.email || null);
+    };
+    getUser();
+  }, []);
+
+  const handleUpdatePassword = async () => {
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    setIsUpdatingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setIsUpdatingPassword(false);
+    if (error) {
+      toast.error("Failed to update password");
+    } else {
+      toast.success("Password updated successfully");
+      setNewPassword("");
+    }
+  };
 
   const handleThemeChange = (newTheme: string) => {
     setTheme(newTheme);
@@ -244,82 +272,82 @@ const Settings = () => {
           <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
             Privacy & Security
-          </h2
-  <div className="glass-card rounded-xl p-4 space-y-6">
-    {/* Email Display */}
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">Account Email</label>
-      <div className="p-2 border rounded-lg bg-muted/50 font-mono text-sm">
-        {/* Supabase user ရဲ့ email ကို ဒီမှာပြပါမယ် */}
-        {user?.email || "Loading..."}
-      </div>
-    </div>
-
-    {/* Change Password Form */}
-    <div className="space-y-3">
-      <label className="text-sm font-medium text-muted-foreground">Change Password</label>
-      <input 
-        type="password" 
-        placeholder="Enter new password" 
-        className="w-full p-2 border rounded-lg bg-background"
-        id="new-password"
-      />
-      <Button 
-        onClick={() => {/* Password update function ကို ဒီမှာခေါ်ပါမယ် */}}
-        className="w-full"
-      >
-        Update Password
-      </Button>
-    </div>
-
-    <div className="border-t pt-4">
-      {/* လက်ရှိရှိနေတဲ့ Clear History ခလုတ်ကို ဒီအောက်မှာ ဆက်ထားပါ */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-0.5">
-          <p className="text-sm font-medium">Clear History</p>
-          <p className="text-xs text-muted-foreground">Delete all your documents and summaries</p>
-        </div>
-        {/* ... Clear History Button ... */}
-      </div>
-    </div>
-  </div>
-</section>
-          <div className="glass-card rounded-xl p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-foreground">Clear History</Label>
-                <p className="text-sm text-muted-foreground">
-                  Delete all your documents and summaries
-                </p>
+          </h2>
+          <div className="glass-card rounded-xl p-4 space-y-6">
+            {/* Account Email Display */}
+            <div className="space-y-2">
+              <Label className="text-foreground">Account Email</Label>
+              <div className="p-3 border border-border rounded-lg bg-muted/50 font-mono text-sm text-foreground">
+                {userEmail || "Loading..."}
               </div>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" className="gap-2">
-                    <Trash2 className="h-4 w-4" />
-                    Clear
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Clear History</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete all your documents and summaries. This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleClearHistory}
-                      disabled={isClearing}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      {isClearing ? "Clearing..." : "Clear All"}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
             </div>
 
+            {/* Change Password */}
+            <div className="space-y-3 border-t border-border pt-4">
+              <div className="space-y-0.5">
+                <Label className="text-foreground flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
+                  Change Password
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Enter a new password (minimum 6 characters)
+                </p>
+              </div>
+              <Input
+                type="password"
+                placeholder="Enter new password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="bg-background"
+              />
+              <Button
+                onClick={handleUpdatePassword}
+                disabled={isUpdatingPassword || !newPassword}
+                className="w-full"
+              >
+                {isUpdatingPassword ? "Updating..." : "Update Password"}
+              </Button>
+            </div>
+
+            {/* Clear History */}
+            <div className="border-t border-border pt-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-foreground">Clear History</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Delete all your documents and summaries
+                  </p>
+                </div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <Trash2 className="h-4 w-4" />
+                      Clear
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Clear History</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete all your documents and summaries. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleClearHistory}
+                        disabled={isClearing}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {isClearing ? "Clearing..." : "Clear All"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+
+            {/* Delete Account */}
             <div className="border-t border-border pt-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
