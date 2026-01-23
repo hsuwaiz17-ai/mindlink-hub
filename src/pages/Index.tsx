@@ -5,6 +5,7 @@ import Header from "@/components/dashboard/Header";
 import ContentInput from "@/components/dashboard/ContentInput";
 import SummarySettings from "@/components/dashboard/SummarySettings";
 import SummaryResult from "@/components/dashboard/SummaryResult";
+import SummaryExportActions from "@/components/dashboard/SummaryExportActions";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useSummarize } from "@/hooks/useSummarize";
 import { useAuth } from "@/hooks/useAuth";
@@ -242,6 +243,15 @@ const Index = () => {
             isLoading={isLoading}
             onExportComplete={handleExportComplete}
           />
+
+          {/* Export Actions */}
+          {summary && !isLoading && (
+            <SummaryExportActions
+              summaryText={summary}
+              title="MindLink Summary"
+              onExportComplete={handleExportComplete}
+            />
+          )}
         </div>
       </main>
     </div>
