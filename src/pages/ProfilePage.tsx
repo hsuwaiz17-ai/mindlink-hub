@@ -4,10 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera } from 'lucide-react';
+import { Camera, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const ProfilePage = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [bio, setBio] = useState('');
@@ -43,7 +47,7 @@ const ProfilePage = () => {
         }
       }
     } catch (error: any) {
-      alert('Error loading user data!');
+      toast.error('Error loading user data!');
       console.error(error.message);
     } finally {
       setLoading(false);
@@ -52,7 +56,7 @@ const ProfilePage = () => {
 
   async function updateProfile() {
     try {
-      setLoading(true);
+      setSaving(true);
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
@@ -67,20 +71,20 @@ const ProfilePage = () => {
         if (error) {
           throw error;
         }
-        alert('Profile updated successfully!');
+        toast.success('Profile updated successfully!');
         setIsEditing(false);
       }
     } catch (error: any) {
-      alert('Error updating the profile!');
+      toast.error('Error updating the profile!');
       console.error(error.message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   }
 
   async function uploadAvatar(event: React.ChangeEvent<HTMLInputElement>) {
     try {
-      setLoading(true);
+      setSaving(true);
       if (!event.target.files || event.target.files.length === 0) {
         throw new Error('You must select an image to upload.');
       }
@@ -104,17 +108,22 @@ const ProfilePage = () => {
         await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
       }
       setAvatarUrl(publicUrl);
+      toast.success('Avatar updated successfully!');
     } catch (error: any) {
-      alert(error.message);
+      toast.error(error.message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   }
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) console.error("Error signing out:", error.message);
-    else window.location.href = '/';
+    if (error) {
+      toast.error("Error signing out: " + error.message);
+    } else {
+      toast.success("Signed out successfully");
+      navigate('/auth');
+    }
   };
 
   if (loading) {
@@ -127,7 +136,12 @@ const ProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-background p-6 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold text-foreground mb-6 text-center">Your Profile</h1>
+      <div className="flex items-center mb-6">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="mr-2">
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <h1 className="text-2xl font-bold text-foreground">Your Profile</h1>
+      </div>
 
       <div className="flex flex-col items-center mb-6">
         <div className="relative">
@@ -158,7 +172,7 @@ const ProfilePage = () => {
             type="text"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            disabled={!isEditing || loading}
+            disabled={!isEditing || saving}
             className="mt-1"
           />
         </div>
@@ -168,7 +182,7 @@ const ProfilePage = () => {
           <Textarea
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            disabled={!isEditing || loading}
+            disabled={!isEditing || saving}
             className="mt-1"
             rows={3}
           />
@@ -176,18 +190,18 @@ const ProfilePage = () => {
       </div>
 
       <div className="flex flex-col space-y-3">
-        <Button onClick={() => setIsEditing(!isEditing)} disabled={loading}>
+        <Button onClick={() => setIsEditing(!isEditing)} disabled={saving}>
           {isEditing ? 'Cancel Edit' : 'Edit Profile'}
         </Button>
         {isEditing && (
-          <Button onClick={updateProfile} disabled={loading}>
-            {loading ? 'Saving...' : 'Save Profile'}
+          <Button onClick={updateProfile} disabled={saving}>
+            {saving ? 'Saving...' : 'Save Profile'}
           </Button>
         )}
-        <Button variant="outline" onClick={handleSignOut} disabled={loading}>
+        <Button variant="outline" onClick={handleSignOut} disabled={saving}>
           Sign Out
         </Button>
-        <Button variant="destructive" disabled={loading}>
+        <Button variant="destructive" disabled>
           Delete Account (Coming Soon)
         </Button>
       </div>
