@@ -244,7 +244,46 @@ const Settings = () => {
           <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
             Privacy & Security
-          </h2>
+          </h2
+  <div className="glass-card rounded-xl p-4 space-y-6">
+    {/* Email Display */}
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-muted-foreground">Account Email</label>
+      <div className="p-2 border rounded-lg bg-muted/50 font-mono text-sm">
+        {/* Supabase user ရဲ့ email ကို ဒီမှာပြပါမယ် */}
+        {user?.email || "Loading..."}
+      </div>
+    </div>
+
+    {/* Change Password Form */}
+    <div className="space-y-3">
+      <label className="text-sm font-medium text-muted-foreground">Change Password</label>
+      <input 
+        type="password" 
+        placeholder="Enter new password" 
+        className="w-full p-2 border rounded-lg bg-background"
+        id="new-password"
+      />
+      <Button 
+        onClick={() => {/* Password update function ကို ဒီမှာခေါ်ပါမယ် */}}
+        className="w-full"
+      >
+        Update Password
+      </Button>
+    </div>
+
+    <div className="border-t pt-4">
+      {/* လက်ရှိရှိနေတဲ့ Clear History ခလုတ်ကို ဒီအောက်မှာ ဆက်ထားပါ */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <p className="text-sm font-medium">Clear History</p>
+          <p className="text-xs text-muted-foreground">Delete all your documents and summaries</p>
+        </div>
+        {/* ... Clear History Button ... */}
+      </div>
+    </div>
+  </div>
+</section>
           <div className="glass-card rounded-xl p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
