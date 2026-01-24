@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Header } from "@/components/dashboard/Header";
 import { ImageUpload } from "@/components/dashboard/ImageUpload";
-import { SummaryResult } from "@/components/dashboard/SummaryResult";
-import { useToast } from "@/components/ui/use-toast";
+import SummaryResult from "@/components/dashboard/SummaryResult";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [summary, setSummary] = useState<string | null>(null);
@@ -11,56 +11,32 @@ const Index = () => {
 
   const handleImageUpload = async (file: File) => {
     setIsLoading(true);
-    try {
-      // API ခေါ်ယူခြင်းနှင့် Summary လုပ်ငန်းစဉ်များကို ဤနေရာတွင် ဆောင်ရွက်သည်
-      console.log("Processing file:", file.name);
-      
-      // မှတ်ချက်- သင်၏ လက်ရှိ API Logic ကို ဤနေရာတွင် ဆက်လက်ထားရှိပါ
-      // ဥပမာ- const result = await processImage(file);
-      // setSummary(result);
-
-      toast({
-        title: "Success",
-        description: "Image processed successfully!",
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to process image. Please try again.",
-      });
-    } finally {
+    // ဤနေရာတွင် သင်၏ API Calling logic များ ထည့်သွင်းရန်
+    setTimeout(() => {
+      setSummary("### Summary Example\nမြန်မာစာနှင့် Chemistry Formula: $E = mc^2$\n\nအနှစ်ချုပ် ရလဒ် ဤနေရာတွင် ပေါ်မည်။");
       setIsLoading(false);
-    }
+      toast({ title: "Completed", description: "Analysis finished successfully!" });
+    }, 2000);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <Header />
-      
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="space-y-8 animate-in fade-in duration-700">
-          <section className="text-center space-y-4">
-            <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">
-              AI Study Assistant
-            </h1>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              သင်္ချာ၊ ဓာတုဗေဒ ပုစ္ဆာများနှင့် မှတ်စုများကို ဓာတ်ပုံရိုက်၍ အနှစ်ချုပ်ခိုင်းပါ။
-            </p>
-          </section>
-
-          <ImageUpload onUpload={handleImageUpload} isLoading={isLoading} />
-
-          {/* ဤနေရာတွင် summary ရှိမှသာ ပြသမည်ဖြစ်ပြီး ခေါင်းစဉ်အပိုကို ဖယ်ရှားထားပါသည် */}
-          {summary && (
-            <div className="mt-8 animate-in slide-in-from-bottom-4 duration-500">
-              <SummaryResult 
-                summary={summary} 
-                isLoading={isLoading} 
-              />
-            </div>
-          )}
+      <main className="container mx-auto px-4 py-10 max-w-3xl space-y-10">
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            MindLink AI Assistant
+          </h1>
+          <p className="text-slate-500">Scan သင်္ချာနှင့် ဓာတုဗေဒ ပုစ္ဆာများကို ဓာတ်ပုံရိုက်ပြီး အဖြေရှာပါ။</p>
         </div>
+
+        <ImageUpload onUpload={handleImageUpload} isLoading={isLoading} />
+
+        {summary && (
+          <div className="animate-in fade-in slide-in-from-bottom-5 duration-700">
+            <SummaryResult summary={summary} isLoading={isLoading} />
+          </div>
+        )}
       </main>
     </div>
   );
