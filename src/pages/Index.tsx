@@ -9,18 +9,15 @@ import { BookOpen, Search, MessageCircle, FileText } from "lucide-react";
 const Index = () => {
   const [summary, setSummary] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeMode, setActiveMode] = useState("Summary");
+  const [mode, setMode] = useState("Summary");
   const { toast } = useToast();
 
   const handleImageUpload = async (file: File) => {
     setIsLoading(true);
-    toast({ title: "Processing...", description: `${activeMode} Mode အသုံးပြုနေပါသည်။` });
-    
-    // AI Processing Logic (Simulation)
     setTimeout(() => {
-      setSummary(`### ${activeMode} Result\n\nAI မှ ${activeMode} အလိုက် ပြင်ဆင်ပေးထားသော ရလဒ် ဤနေရာတွင် ပေါ်လာပါမည်။`);
+      setSummary(`### ${mode} Result\n\nAI မှ ${mode} ပုံစံဖြင့် ခွဲခြမ်းစိတ်ဖြာပေးထားသော ရလဒ် ဤနေရာတွင် ပေါ်လာပါမည်။`);
       setIsLoading(false);
-    }, 2500);
+    }, 2000);
   };
 
   const modes = [
@@ -33,33 +30,21 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-white">
       <Header />
-      <main className="container mx-auto px-4 py-12 max-w-4xl space-y-10">
-        <div className="text-center space-y-4">
-          <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">AI Academic Assistant</h2>
-          <p className="text-slate-500 text-lg">လုပ်ဆောင်လိုသည့် ပုံစံကို ရွေးချယ်ပြီး ပုံတင်ပါ</p>
-        </div>
-
-        {/* Mode Selector Buttons */}
-        <div className="flex flex-wrap justify-center gap-3">
-          {modes.map((mode) => (
+      <main className="container mx-auto px-4 py-10 max-w-3xl space-y-8">
+        <div className="flex flex-wrap justify-center gap-2">
+          {modes.map((m) => (
             <Button
-              key={mode.id}
-              variant={activeMode === mode.id ? "default" : "secondary"}
-              onClick={() => setActiveMode(mode.id)}
-              className={`rounded-full px-6 py-5 flex gap-2 transition-all ${
-                activeMode === mode.id ? "bg-indigo-600 hover:bg-indigo-700 shadow-md" : ""
-              }`}
+              key={m.id}
+              variant={mode === m.id ? "default" : "outline"}
+              onClick={() => setMode(m.id)}
+              className="flex gap-2 rounded-full"
             >
-              {mode.icon} {mode.label}
+              {m.icon} {m.label}
             </Button>
           ))}
         </div>
-
         <ImageUpload onUpload={handleImageUpload} isLoading={isLoading} />
-
-        {summary && (
-          <SummaryResult summary={summary} isLoading={isLoading} />
-        )}
+        {summary && <SummaryResult summary={summary} isLoading={isLoading} />}
       </main>
     </div>
   );
