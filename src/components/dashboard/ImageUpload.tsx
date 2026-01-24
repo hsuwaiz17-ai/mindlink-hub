@@ -2,6 +2,7 @@ import React, { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload, Camera } from "lucide-react";
 
+// Named Export ကို သေချာသုံးထားပါသည်
 export const ImageUpload = ({ onUpload, isLoading }: { onUpload: (file: File) => void, isLoading: boolean }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -17,20 +18,20 @@ export const ImageUpload = ({ onUpload, isLoading }: { onUpload: (file: File) =>
       <div className="flex flex-wrap justify-center gap-4 w-full">
         <Button 
           variant="outline" 
-          className="flex-1 h-28 flex flex-col gap-2" 
+          className="flex-1 h-32 flex flex-col gap-3 bg-white hover:bg-slate-50 border-2"
           onClick={() => fileInputRef.current?.click()} 
           disabled={isLoading}
         >
-          <Upload className="h-6 w-6 text-indigo-600" />
-          <span>ပုံတင်ရန်</span>
+          <Upload className="h-8 w-8 text-indigo-600" />
+          <span className="font-semibold">Upload Photo</span>
         </Button>
         <Button 
-          className="flex-1 h-28 flex flex-col gap-2 bg-indigo-600" 
+          className="flex-1 h-32 flex flex-col gap-3 bg-indigo-600 hover:bg-indigo-700 shadow-lg"
           onClick={() => fileInputRef.current?.click()} 
           disabled={isLoading}
         >
-          <Camera className="h-6 w-6 text-white" />
-          <span className="text-white">Scan ဖတ်ရန်</span>
+          <Camera className="h-8 w-8 text-white" />
+          <span className="font-semibold text-white">Scan Document</span>
         </Button>
       </div>
     </div>
