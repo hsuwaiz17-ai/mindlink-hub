@@ -1,35 +1,40 @@
-const handleExportPDF = async () => {
-    if (!resultRef.current) return;
-    
-    setIsExporting(true);
-    try {
-      // ၁။ Screen ပေါ်က ပုံစံအတိုင်း ပုံရိပ်ဖမ်းယူခြင်း
-      const canvas = await htmlToImage.toCanvas(resultRef.current, {
-        backgroundColor: "#ffffff",
-        pixelRatio: 2, // စာသားကြည်လင်စေရန်
-      });
+import React from "react";
+import { Loader2, FileText } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
-      const imgData = canvas.toDataURL("image/png");
-      
-      // ၂။ PDF တည်ဆောက်ခြင်း (A4 size)
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      
-      // ပုံရဲ့ အချိုးအစားကို တွက်ချက်ခြင်း
-      const imgWidth = pdfWidth - 20; // Margin 10mm left/right
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      // ၃။ PDF ထဲသို့ ပုံထည့်ခြင်း (စာသားပုံစံမပျက်စေရန်)
-      pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight);
-      
-      pdf.save(`mindlink-summary-${Date.now()}.pdf`);
-      
-      toast.success("PDF exported with original formatting");
-    } catch (error) {
-      console.error("PDF export error:", error);
-      toast.error("Failed to export PDF");
-    } finally {
-      setIsExporting(false);
-    }
-  };
+interface SummaryResultProps {
+  summary: string;
+  isLoading: boolean;
+  onExportComplete?: () => void;
+}
+
+const SummaryResult = ({
+  summary,
+  isLoading,
+}: SummaryResultProps) => {
+  if (!summary && !isLoading) {
+    return null;
+  }
+
+  return (
+    <div className="glass-card rounded-2xl p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <FileText className="h-5 w-5 text-primary" />
+        <h3 className="font-semibold text-foreground">Summary Result</h3>
+      </div>
+
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+          <p className="text-muted-foreground">Generating summary...</p>
+        </div>
+      ) : (
+        <div className="prose prose-sm dark:prose-invert max-w-none">
+          <ReactMarkdown>{summary}</ReactMarkdown>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default SummaryResult;
