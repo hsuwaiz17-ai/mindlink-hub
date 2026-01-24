@@ -203,17 +203,6 @@ const Index = () => {
               isLoading={isLoading}
             />
           </Suspense>
-
-          {/* Export actions shown only after summary is generated */}
-          {summary && !isLoading && (
-            <Suspense fallback={<ComponentLoader />}>
-              <SummaryExportActions
-                summaryText={summary}
-                title="MindLink Summary"
-                onExportComplete={() => {}}
-              />
-            </Suspense>
-          )}
         </div>
       </main>
     </div>
