@@ -1,5 +1,5 @@
 import React from "react";
-import { Loader2, FileText, Download, Share2 } from "lucide-react";
+import { Download, Image as ImageIcon, FileText, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -12,18 +12,15 @@ interface SummaryResultProps {
 }
 
 export const SummaryResult = ({ summary, isLoading }: SummaryResultProps) => {
-  const handleDownloadPDF = async () => {
-    // PDF ထုတ်မည့် နေရာကို ရှာခြင်း
+  const exportFile = async (format: 'pdf' | 'png') => {
+    // PDF ထုတ်မည့် ဧရိယာကို ID ဖြင့် တိတိကျကျ သတ်မှတ်ထားသည်
     const element = document.getElementById("printable-content");
-    if (!element) {
-      toast.error("Content area not found");
-      return;
-    }
+    if (!element) return;
 
     try {
-      toast.info("Generating High-Quality PDF...");
+      toast.info(`Generating High-Quality ${format.toUpperCase()}...`);
       
-      // စာသားများကို ပုံရိပ်အဖြစ် ဖမ်းယူခြင်း (Scale 3 က စာကို ပိုကြည်စေသည်)
+      // စာသားနှင့် ပုံသေနည်းများ မပျက်စေရန် High Resolution (Scale 3) ဖြင့် ပုံဖမ်းခြင်း
       const canvas = await html2canvas(element, { 
         scale: 3, 
         useCORS: true,
@@ -32,70 +29,68 @@ export const SummaryResult = ({ summary, isLoading }: SummaryResultProps) => {
       });
       
       const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-      // ပုံရိပ်ကို PDF ထဲသို့ ထည့်ခြင်း
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save("MindLink-Analysis-Result.pdf");
-      
-      toast.success("PDF Downloaded successfully!");
+      if (format === 'pdf') {
+        // A4 Size PDF ဖန်တီးခြင်း
+        const pdf = new jsPDF("p", "mm", "a4");
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        // ပုံရိပ်ကို PDF ထဲသို့ ထည့်ခြင်း (မူရင်းပုံစံအတိုင်း ရှိနေမည်)
+        pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+        pdf.save("MindLink-Analysis-Result.pdf");
+      } else {
+        // Image အနေဖြင့် သိမ်းဆည်းခြင်း
+        const link = document.createElement('a');
+        link.download = 'MindLink-Analysis-Result.png';
+        link.href = imgData;
+        link.click();
+      }
+      toast.success("Saved successfully!");
     } catch (error) {
-      console.error("PDF Error:", error);
-      toast.error("Failed to generate PDF. Please try again.");
+      console.error("Export error:", error);
+      toast.error("Export failed. Please try again.");
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center p-12 bg-white/50 rounded-xl border-2 border-dashed border-primary/20 animate-pulse">
-        <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
-        <p className="text-muted-foreground font-medium">Analyzing your document...</p>
-      </div>
-    );
-  }
+  if (isLoading) return (
+    <div className="flex flex-col items-center justify-center p-12 bg-white/50 rounded-xl border-2 border-dashed border-primary/20">
+      <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
+      <p className="text-muted-foreground font-medium">Processing High Quality Result...</p>
+    </div>
+  );
 
   if (!summary) return null;
 
   return (
-    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header Section */}
-      <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-slate-900 rounded-t-xl border-b shadow-sm">
-        <div className="flex items-center gap-2">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <FileText className="h-5 w-5 text-primary" />
-          </div>
-          <h3 className="font-bold text-lg">Analysis Result</h3>
-        </div>
+    <div className="bg-white rounded-xl shadow-lg border overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+      {/* Control Panel */}
+      <div className="flex items-center justify-between p-4 bg-slate-50 border-b">
+        <h3 className="font-bold text-slate-700 flex items-center gap-2">
+          <FileText className="w-4 h-4" /> Analysis Result
+        </h3>
         <div className="flex gap-2">
-          <Button onClick={handleDownloadPDF} variant="outline" size="sm" className="hidden sm:flex">
-            <Download className="mr-2 h-4 w-4" /> Export PDF
+          <Button onClick={() => exportFile('pdf')} variant="default" size="sm" className="bg-red-600 hover:bg-red-700">
+            <Download className="w-4 h-4 mr-2" /> Save PDF
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => toast.info("Coming soon!")}>
-            <Share2 className="h-4 w-4" />
+          <Button onClick={() => exportFile('png')} variant="outline" size="sm">
+            <ImageIcon className="w-4 h-4 mr-2" /> Save Image
           </Button>
         </div>
       </div>
 
-      {/* Printable Area - ဤ ID သည် PDF ထုတ်ရန် အလွန်အရေးကြီးပါသည် */}
+      {/* Printable Area - ဤ ID ကို html2canvas က အသုံးပြုမည်ဖြစ်သည် */}
       <div 
         id="printable-content" 
-        className="p-8 bg-white text-slate-900 rounded-b-xl shadow-lg leading-relaxed overflow-hidden"
+        className="p-10 bg-white text-slate-900 leading-relaxed overflow-x-auto"
       >
         <div className="prose prose-slate max-w-none 
           prose-headings:text-slate-900 prose-headings:font-bold
-          prose-p:text-slate-700 prose-li:text-slate-700
-          prose-strong:text-primary prose-code:text-blue-600">
+          prose-p:text-slate-700 prose-strong:text-primary
+          prose-code:bg-slate-100 prose-code:p-1 prose-code:rounded">
           <ReactMarkdown>{summary}</ReactMarkdown>
         </div>
       </div>
-
-      {/* Mobile-only Download Button */}
-      <Button onClick={handleDownloadPDF} className="w-full sm:hidden" size="lg">
-        <Download className="mr-2 h-5 w-5" /> Download Analysis (PDF)
-      </Button>
     </div>
   );
 };
