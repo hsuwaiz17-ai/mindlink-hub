@@ -1,21 +1,30 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/dashboard/Header";
-import ContentInput from "@/components/dashboard/ContentInput";
-import SummarySettings from "@/components/dashboard/SummarySettings";
-import SummaryResult from "@/components/dashboard/SummaryResult";
-import SummaryExportActions from "@/components/dashboard/SummaryExportActions";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useSummarize } from "@/hooks/useSummarize";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+// Lazy load heavy components for performance
+const ContentInput = lazy(() => import("@/components/dashboard/ContentInput"));
+const SummarySettings = lazy(() => import("@/components/dashboard/SummarySettings"));
+const SummaryResult = lazy(() => import("@/components/dashboard/SummaryResult"));
+const SummaryExportActions = lazy(() => import("@/components/dashboard/SummaryExportActions"));
+
+// Loading fallback component
+const ComponentLoader = () => (
+  <div className="glass-card rounded-2xl p-6 animate-pulse">
+    <div className="h-32 bg-muted/30 rounded-lg" />
+  </div>
+);
+
 const Index = () => {
   const [content, setContent] = useState("");
-  const [selectedImages, setSelectedImages] = useState<File[]>([]); // Array ဖြစ်အောင် ပြောင်းလဲထားပါသည်
-  const [imagesBase64, setImagesBase64] = useState<string[]>([]); // Base64 array
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagesBase64, setImagesBase64] = useState<string[]>([]);
   const [summary, setSummary] = useState("");
   const [currentDocId, setCurrentDocId] = useState<string | null>(null);
   
@@ -23,7 +32,7 @@ const Index = () => {
   const { summarize, isLoading } = useSummarize();
   const { user } = useAuth();
 
-  // ပုံအများကြီးအတွက် Base64 သို့ ပြောင်းလဲခြင်း
+  // Convert multiple images to Base64
   useEffect(() => {
     if (selectedImages.length > 0) {
       const convertPromises = selectedImages.map(file => {
@@ -45,7 +54,7 @@ const Index = () => {
     }
   }, [selectedImages]);
 
-  // ပုံအများကြီးကို Storage သို့ Upload တင်ခြင်း
+  // Upload multiple images to Storage
   const uploadImagesToStorage = async (files: File[]): Promise<string[]> => {
     if (!user) return [];
     
@@ -83,12 +92,12 @@ const Index = () => {
       return;
     }
 
-    // AI ဆီသို့ ပုံအားလုံး ပို့ပေးခြင်း (မှတ်ချက်- AI hook က array လက်ခံရန် လိုအပ်နိုင်ပါသည်)
+    // Send first image to AI (hook accepts single image currently)
     const result = await summarize({
       content,
       language: settings.language,
       aiModel: settings.aiModel,
-      imageBase64: imagesBase64[0] || undefined, // လက်ရှိ AI hook သည် ပုံတစ်ပုံတည်းသာ လက်ခံပါက ပထမပုံကို ပို့ပါမည်
+      imageBase64: imagesBase64[0] || undefined,
     });
 
     if (result) {
@@ -109,7 +118,7 @@ const Index = () => {
             original_content: content || null,
             input_type: inputType,
             title: content?.slice(0, 50) || "Untitled Document",
-            image_url: imageUrls[0] || null, // ပထမပုံ URL ကို သိမ်းဆည်းခြင်း
+            image_url: imageUrls[0] || null,
           })
           .select()
           .single();
@@ -127,6 +136,10 @@ const Index = () => {
         console.error("Database error:", error);
       }
     }
+  };
+
+  const handleImagesSelected = (files: File[]) => {
+    setSelectedImages(prev => [...prev, ...files]);
   };
 
   const hasContent = content.trim().length > 0 || imagesBase64.length > 0;
@@ -151,18 +164,22 @@ const Index = () => {
         </div>
 
         <div className="mx-auto max-w-4xl space-y-6">
-          <ContentInput
-            content={content}
-            onContentChange={setContent}
-            onImagesSelected={setSelectedImages} // နာမည်အသစ် 'onImagesSelected' သို့ ပြောင်းထားပါသည်
-          />
+          <Suspense fallback={<ComponentLoader />}>
+            <ContentInput
+              content={content}
+              onContentChange={setContent}
+              onImagesSelected={handleImagesSelected}
+            />
+          </Suspense>
 
-          <SummarySettings
-            aiModel={settings.aiModel}
-            language={settings.language}
-            onAiModelChange={(value) => updateSettings({ aiModel: value })}
-            onLanguageChange={(value) => updateSettings({ language: value })}
-          />
+          <Suspense fallback={<ComponentLoader />}>
+            <SummarySettings
+              aiModel={settings.aiModel}
+              language={settings.language}
+              onAiModelChange={(value) => updateSettings({ aiModel: value })}
+              onLanguageChange={(value) => updateSettings({ language: value })}
+            />
+          </Suspense>
 
           <div className="flex justify-center">
             <Button
@@ -179,18 +196,23 @@ const Index = () => {
             </Button>
           </div>
 
-          <SummaryResult
-            summary={summary}
-            isLoading={isLoading}
-            onExportComplete={() => {}} 
-          />
-
-          {summary && !isLoading && (
-            <SummaryExportActions
-              summaryText={summary}
-              title="MindLink Summary"
-              onExportComplete={() => {}}
+          {/* Only show SummaryResult when there's content */}
+          <Suspense fallback={<ComponentLoader />}>
+            <SummaryResult
+              summary={summary}
+              isLoading={isLoading}
             />
+          </Suspense>
+
+          {/* Export actions shown only after summary is generated */}
+          {summary && !isLoading && (
+            <Suspense fallback={<ComponentLoader />}>
+              <SummaryExportActions
+                summaryText={summary}
+                title="MindLink Summary"
+                onExportComplete={() => {}}
+              />
+            </Suspense>
           )}
         </div>
       </main>
