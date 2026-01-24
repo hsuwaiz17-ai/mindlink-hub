@@ -9,17 +9,17 @@ import { BookOpen, Search, MessageCircle, FileText } from "lucide-react";
 const Index = () => {
   const [summary, setSummary] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [mode, setMode] = useState("Summary");
+  const [activeMode, setActiveMode] = useState("Summary");
   const { toast } = useToast();
 
   const handleImageUpload = async (file: File) => {
     setIsLoading(true);
-    // AI Processing Simulation
+    // AI Processing logic goes here
     setTimeout(() => {
-      setSummary(`### ${mode} ရလဒ်\n\nဒီနေရာမှာ ${mode} အတွက် AI ရဲ့ ခွဲခြမ်းစိတ်ဖြာချက်တွေ ပေါ်လာပါမယ်။`);
+      setSummary(`### ${activeMode} Result\n\nAI မှ ${activeMode} ပုံစံဖြင့် ခွဲခြမ်းစိတ်ဖြာပေးထားသော ရလဒ် ဤနေရာတွင် ပေါ်လာပါမည်။`);
       setIsLoading(false);
-      toast({ title: "အောင်မြင်ပါသည်", description: "ရလဒ်များကို ပြင်ဆင်ပြီးပါပြီ။" });
-    }, 2000);
+      toast({ title: "Completed", description: `${activeMode} process successful.` });
+    }, 2500);
   };
 
   const modes = [
@@ -32,21 +32,28 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
-      <main className="container mx-auto px-4 py-10 max-w-3xl space-y-8">
+      <main className="container mx-auto px-4 py-12 max-w-4xl space-y-10">
+        <div className="text-center space-y-4">
+          <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">AI Study Assistant</h2>
+          <p className="text-slate-500 text-lg font-medium">ဘာလုပ်ဆောင်လိုသလဲ ရွေးချယ်ပေးပါ</p>
+        </div>
+
         <div className="flex flex-wrap justify-center gap-3">
           {modes.map((m) => (
             <Button
               key={m.id}
-              variant={mode === m.id ? "default" : "outline"}
-              onClick={() => setMode(m.id)}
-              className="flex gap-2 rounded-full px-6 py-5 shadow-sm"
+              variant={activeMode === m.id ? "default" : "secondary"}
+              onClick={() => setActiveMode(m.id)}
+              className={`rounded-full px-8 py-6 text-md font-bold transition-all ${
+                activeMode === m.id ? "bg-indigo-600 shadow-indigo-200 shadow-xl scale-105" : "hover:bg-slate-200"
+              }`}
             >
-              {m.icon} {m.label}
+              <span className="mr-2">{m.icon}</span> {m.label}
             </Button>
           ))}
         </div>
 
-        <div className="bg-white p-6 rounded-3xl shadow-sm border">
+        <div className="bg-white p-2 rounded-[2rem] shadow-2xl shadow-slate-200">
           <ImageUpload onUpload={handleImageUpload} isLoading={isLoading} />
         </div>
 
