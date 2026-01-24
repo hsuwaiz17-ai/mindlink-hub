@@ -14,9 +14,11 @@ const Index = () => {
 
   const handleImageUpload = async (file: File) => {
     setIsLoading(true);
+    // AI Processing Simulation
     setTimeout(() => {
-      setSummary(`### ${mode} Result\n\nAI မှ ${mode} ပုံစံဖြင့် ခွဲခြမ်းစိတ်ဖြာပေးထားသော ရလဒ် ဤနေရာတွင် ပေါ်လာပါမည်။`);
+      setSummary(`### ${mode} ရလဒ်\n\nဒီနေရာမှာ ${mode} အတွက် AI ရဲ့ ခွဲခြမ်းစိတ်ဖြာချက်တွေ ပေါ်လာပါမယ်။`);
       setIsLoading(false);
+      toast({ title: "အောင်မြင်ပါသည်", description: "ရလဒ်များကို ပြင်ဆင်ပြီးပါပြီ။" });
     }, 2000);
   };
 
@@ -28,22 +30,26 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-50">
       <Header />
       <main className="container mx-auto px-4 py-10 max-w-3xl space-y-8">
-        <div className="flex flex-wrap justify-center gap-2">
+        <div className="flex flex-wrap justify-center gap-3">
           {modes.map((m) => (
             <Button
               key={m.id}
               variant={mode === m.id ? "default" : "outline"}
               onClick={() => setMode(m.id)}
-              className="flex gap-2 rounded-full"
+              className="flex gap-2 rounded-full px-6 py-5 shadow-sm"
             >
               {m.icon} {m.label}
             </Button>
           ))}
         </div>
-        <ImageUpload onUpload={handleImageUpload} isLoading={isLoading} />
+
+        <div className="bg-white p-6 rounded-3xl shadow-sm border">
+          <ImageUpload onUpload={handleImageUpload} isLoading={isLoading} />
+        </div>
+
         {summary && <SummaryResult summary={summary} isLoading={isLoading} />}
       </main>
     </div>
