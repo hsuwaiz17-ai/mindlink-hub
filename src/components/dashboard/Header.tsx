@@ -1,4 +1,4 @@
-import { Settings, User, LogOut } from "lucide-react";
+import { Settings, User, LogOut, History } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,6 +64,10 @@ const Header = () => {
             <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/profile")}>
               <User className="mr-2 h-4 w-4" />
               Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/history")}>
+              <History className="mr-2 h-4 w-4" />
+              History
             </DropdownMenuItem>
             <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/settings")}>
               <Settings className="mr-2 h-4 w-4" />
