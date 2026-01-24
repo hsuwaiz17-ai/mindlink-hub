@@ -22,20 +22,20 @@ export const ImageUpload = ({ onUpload, isLoading }: ImageUploadProps) => {
       <div className="flex flex-wrap justify-center gap-4 w-full">
         <Button
           variant="outline"
-          className="flex-1 h-32 flex flex-col gap-3 bg-white hover:bg-slate-50 transition-all border-2"
+          className="flex-1 h-28 flex flex-col gap-2 bg-white"
           onClick={() => fileInputRef.current?.click()}
           disabled={isLoading}
         >
-          <Upload className="h-8 w-8 text-indigo-600" />
-          <span className="font-semibold">Upload Photo/Document</span>
+          <Upload className="h-6 w-6 text-indigo-600" />
+          <span>Upload Image</span>
         </Button>
         <Button
-          className="flex-1 h-32 flex flex-col gap-3 bg-indigo-600 hover:bg-indigo-700 transition-all shadow-lg"
+          className="flex-1 h-28 flex flex-col gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-md"
           onClick={() => fileInputRef.current?.click()}
           disabled={isLoading}
         >
-          <Camera className="h-8 w-8 text-white" />
-          <span className="font-semibold text-white">Scan with Camera</span>
+          <Camera className="h-6 w-6 text-white" />
+          <span className="text-white">Scan Document</span>
         </Button>
       </div>
     </div>
