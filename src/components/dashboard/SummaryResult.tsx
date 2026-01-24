@@ -1,54 +1,106 @@
+// File: /workspaces/mindlink-hub/src/components/dashboard/SummaryResult.tsx
 import React from "react";
-import { FileDown, ImageIcon, Loader2 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
+import { Loader2, Copy, Check } from "lucide-react";
 
-export const SummaryResult = ({ summary, isLoading }: { summary: string, isLoading: boolean }) => {
-  const handleExport = async (type: 'pdf' | 'png') => {
-    const element = document.getElementById("result-box");
-    if (!element) return;
-    try {
-      toast.info(`${type.toUpperCase()} သိမ်းဆည်းနေပါသည်...`);
-      const canvas = await html2canvas(element, { scale: 3, useCORS: true });
-      const imgData = canvas.toDataURL("image/png");
+interface SummaryResultProps {
+  summary: string | null;
+  isLoading: boolean;
+}
 
-      if (type === 'pdf') {
-        const pdf = new jsPDF("p", "mm", "a4");
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-        pdf.save("Study-Result.pdf");
-      } else {
-        const link = document.createElement("a");
-        link.download = "Study-Result.png";
-        link.href = imgData;
-        link.click();
-      }
-      toast.success("Successfully saved!");
-    } catch (e) { toast.error("Export Error: " + e); }
+export const SummaryResult: React.FC<SummaryResultProps> = ({ 
+  summary, 
+  isLoading 
+}) => {
+  const [copied, setCopied] = React.useState(false);
+
+  const handleCopy = () => {
+    if (summary) {
+      navigator.clipboard.writeText(summary);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
-  if (isLoading) return <div className="flex justify-center p-20"><Loader2 className="animate-spin h-12 w-12 text-indigo-600" /></div>;
-
-  return (
-    <div className="bg-white rounded-[2rem] border-2 border-slate-100 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-500">
-      <div className="flex flex-wrap items-center justify-between p-6 bg-slate-50/50 border-b gap-4">
-        <h3 className="font-bold text-slate-800 text-xl">Analysis Result</h3>
-        <div className="flex gap-3">
-          <Button onClick={() => handleExport('pdf')} size="sm" className="bg-red-600 hover:bg-red-700 rounded-full px-5">
-            <FileDown className="w-4 h-4 mr-2" /> PDF သိမ်းမည်
-          </Button>
-          <Button onClick={() => handleExport('png')} size="sm" variant="outline" className="border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-full px-5">
-            <ImageIcon className="w-4 h-4 mr-2" /> ပုံသိမ်းမည်
-          </Button>
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-3xl shadow-xl p-8 border border-slate-100">
+        <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+          <Loader2 className="w-6 h-6 mr-3 animate-spin text-indigo-600" />
+          AI ခွဲခြမ်းစိတ်ဖြာနေသည်...
+        </h3>
+        <div className="space-y-4">
+          <div className="h-4 bg-slate-200 rounded-full animate-pulse w-3/4"></div>
+          <div className="h-4 bg-slate-200 rounded-full animate-pulse w-full"></div>
+          <div className="h-4 bg-slate-200 rounded-full animate-pulse w-5/6"></div>
+          <div className="h-4 bg-slate-200 rounded-full animate-pulse w-4/5"></div>
         </div>
       </div>
-      <div id="result-box" className="p-12 bg-white">
-        <div className="prose prose-indigo max-w-none prose-p:text-slate-700 prose-headings:text-slate-900 prose-strong:text-indigo-600">
-          <ReactMarkdown>{summary}</ReactMarkdown>
+    );
+  }
+
+  if (!summary) {
+    return (
+      <div className="bg-white rounded-3xl shadow-xl p-8 border border-slate-100">
+        <h3 className="text-2xl font-bold text-slate-800 mb-4">ရလဒ်</h3>
+        <div className="text-center py-12">
+          <div className="w-20 h-20 mx-auto mb-6 flex items-center justify-center bg-slate-100 rounded-full">
+            <div className="text-slate-400 text-3xl">📄</div>
+          </div>
+          <p className="text-slate-500 text-lg">ဓာတ်ပုံတင်ပြီးရင် ရလဒ်က ဒီမှာပေါ်လာပါမယ်</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-3xl shadow-xl p-8 border border-slate-100">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-2xl font-bold text-slate-800">AI ခွဲခြမ်းစိတ်ဖြာချက်</h3>
+        <button
+          onClick={handleCopy}
+          className="flex items-center px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full transition-all"
+        >
+          {copied ? (
+            <>
+              <Check className="w-4 h-4 mr-2 text-green-600" />
+              <span className="text-green-600 font-medium">Copied!</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-4 h-4 mr-2" />
+              <span>Copy</span>
+            </>
+          )}
+        </button>
+      </div>
+      
+      <div className="prose prose-lg max-w-none">
+        <div className="bg-gradient-to-br from-indigo-50 to-slate-50 rounded-2xl p-6 border border-slate-200">
+          <pre className="whitespace-pre-wrap font-sans text-slate-700 leading-relaxed text-lg">
+            {summary}
+          </pre>
+        </div>
+      </div>
+      
+      <div className="mt-8 pt-6 border-t border-slate-100">
+        <div className="flex items-center justify-between text-slate-500">
+          <div className="flex items-center">
+            <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+              <div className="text-indigo-600">🤖</div>
+            </div>
+            <div>
+              <p className="font-medium">AI Study Assistant</p>
+              <p className="text-sm">Generated just now</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+              ✓ Verified
+            </span>
+            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+              မြန်မာ
+            </span>
+          </div>
         </div>
       </div>
     </div>
