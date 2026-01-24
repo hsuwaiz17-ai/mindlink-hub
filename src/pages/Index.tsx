@@ -14,7 +14,6 @@ const SummarySettings = lazy(() => import("@/components/dashboard/SummarySetting
 const SummaryResult = lazy(() => import("@/components/dashboard/SummaryResult"));
 const SummaryExportActions = lazy(() => import("@/components/dashboard/SummaryExportActions"));
 
-// Loading fallback component
 const ComponentLoader = () => (
   <div className="glass-card rounded-2xl p-6 animate-pulse">
     <div className="h-32 bg-muted/30 rounded-lg" />
@@ -32,7 +31,6 @@ const Index = () => {
   const { summarize, isLoading } = useSummarize();
   const { user } = useAuth();
 
-  // Convert multiple images to Base64
   useEffect(() => {
     if (selectedImages.length > 0) {
       const convertPromises = selectedImages.map(file => {
@@ -54,7 +52,6 @@ const Index = () => {
     }
   }, [selectedImages]);
 
-  // Upload multiple images to Storage
   const uploadImagesToStorage = async (files: File[]): Promise<string[]> => {
     if (!user) return [];
     
@@ -92,12 +89,12 @@ const Index = () => {
       return;
     }
 
-    // Send first image to AI (hook accepts single image currently)
+    // Combine multiple images or process the first one based on your hook logic
     const result = await summarize({
       content,
       language: settings.language,
       aiModel: settings.aiModel,
-      imageBase64: imagesBase64[0] || undefined,
+      imageBase64: imagesBase64[0] || undefined, 
     });
 
     if (result) {
@@ -146,6 +143,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Chrome optimization: Pre-rendered background */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-1/2 -right-1/2 h-full w-full rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute -bottom-1/2 -left-1/2 h-full w-full rounded-full bg-accent/10 blur-3xl" />
@@ -196,23 +194,26 @@ const Index = () => {
             </Button>
           </div>
 
-          {/* Only show SummaryResult when there's content */}
-          <Suspense fallback={<ComponentLoader />}>
-            <SummaryResult
-              summary={summary}
-              isLoading={isLoading}
-            />
-          </Suspense>
+          {/* Combined display to prevent duplicate headers */}
+          {summary && (
+            <div id="printable-summary" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <Suspense fallback={<ComponentLoader />}>
+                <SummaryResult
+                  summary={summary}
+                  isLoading={isLoading}
+                />
+              </Suspense>
 
-          {/* Export actions shown only after summary is generated */}
-          {summary && !isLoading && (
-            <Suspense fallback={<ComponentLoader />}>
-              <SummaryExportActions
-                summaryText={summary}
-                title="MindLink Summary"
-                onExportComplete={() => {}}
-              />
-            </Suspense>
+              {!isLoading && (
+                <Suspense fallback={<ComponentLoader />}>
+                  <SummaryExportActions
+                    summaryText={summary}
+                    title="MindLink Summary"
+                    onExportComplete={() => {}}
+                  />
+                </Suspense>
+              )}
+            </div>
           )}
         </div>
       </main>
