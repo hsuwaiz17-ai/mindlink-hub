@@ -89,7 +89,6 @@ const Index = () => {
       return;
     }
 
-    // Combine multiple images or process the first one based on your hook logic
     const result = await summarize({
       content,
       language: settings.language,
@@ -143,7 +142,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Chrome optimization: Pre-rendered background */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-1/2 -right-1/2 h-full w-full rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute -bottom-1/2 -left-1/2 h-full w-full rounded-full bg-accent/10 blur-3xl" />
@@ -194,7 +192,7 @@ const Index = () => {
             </Button>
           </div>
 
-          {/* Combined display to prevent duplicate headers */}
+          {/* ပြင်ဆင်ထားသော အပိုင်း - ခေါင်းစဉ်အပိုကို ဖယ်ရှားလိုက်သည် */}
           {summary && (
             <div id="printable-summary" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <Suspense fallback={<ComponentLoader />}>
@@ -208,7 +206,7 @@ const Index = () => {
                 <Suspense fallback={<ComponentLoader />}>
                   <SummaryExportActions
                     summaryText={summary}
-                    title="MindLink Summary"
+                    title="Summary Export" 
                     onExportComplete={() => {}}
                   />
                 </Suspense>
