@@ -1,7 +1,7 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Header } from "@/components/dashboard/Header";
-import { ImageUpload } from "@/components/dashboard/ImageUpload";
-import SummaryResult from "@/components/dashboard/SummaryResult";
+import { ImageUpload } from "@/components/dashboard/ImageUpload"; // လမ်းကြောင်းမှန်အောင် စစ်ပါ
+import { SummaryResult } from "@/components/dashboard/SummaryResult";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
@@ -11,32 +11,19 @@ const Index = () => {
 
   const handleImageUpload = async (file: File) => {
     setIsLoading(true);
-    // ဤနေရာတွင် သင်၏ API Calling logic များ ထည့်သွင်းရန်
+    // API logic များကို ဤနေရာတွင် ဆက်လက်ထားရှိပါ
     setTimeout(() => {
-      setSummary("### Summary Example\nမြန်မာစာနှင့် Chemistry Formula: $E = mc^2$\n\nအနှစ်ချုပ် ရလဒ် ဤနေရာတွင် ပေါ်မည်။");
+      setSummary("Upload Success! Analysis will start here.");
       setIsLoading(false);
-      toast({ title: "Completed", description: "Analysis finished successfully!" });
     }, 2000);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen">
       <Header />
-      <main className="container mx-auto px-4 py-10 max-w-3xl space-y-10">
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            MindLink AI Assistant
-          </h1>
-          <p className="text-slate-500">Scan သင်္ချာနှင့် ဓာတုဗေဒ ပုစ္ဆာများကို ဓာတ်ပုံရိုက်ပြီး အဖြေရှာပါ။</p>
-        </div>
-
+      <main className="container mx-auto p-6 max-w-2xl">
         <ImageUpload onUpload={handleImageUpload} isLoading={isLoading} />
-
-        {summary && (
-          <div className="animate-in fade-in slide-in-from-bottom-5 duration-700">
-            <SummaryResult summary={summary} isLoading={isLoading} />
-          </div>
-        )}
+        {summary && <SummaryResult summary={summary} isLoading={isLoading} />}
       </main>
     </div>
   );
