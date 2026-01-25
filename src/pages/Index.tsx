@@ -1,97 +1,81 @@
 import React, { useState } from "react";
-import { useTranslation } from 'react-i18next'; // ဘာသာစကားပြောင်းရန် Hook ထည့်သွင်းခြင်း
-import { Header } from "@/components/dashboard/Header";
-import { ImageUpload } from "@/components/dashboard/ImageUpload";
-import { SummaryResult } from "@/components/dashboard/SummaryResult";
+import { useTranslation } from 'react-i18next';
+import { Header } from "../components/dashboard/Header";
+import { ImageUpload } from "../components/dashboard/ImageUpload";
+import { SummaryResult } from "../components/dashboard/SummaryResult";
+import { Globe, History, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { BookOpen, Search, MessageCircle, FileText, Globe } from "lucide-react"; // Globe icon ထည့်သွင်းခြင်း
 
 const Index = () => {
-  const { t, i18n } = useTranslation(); // Translation function (t) နှင့် i18n instance ကိုယူခြင်း
+  const { t, i18n } = useTranslation();
   const [summary, setSummary] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeMode, setActiveMode] = useState("Summary");
-  const { toast } = useToast();
+  const [activeMode, setActiveMode] = useState("summary");
 
-  // ဘာသာစကားပြောင်းလဲသည့် function
-  const changeLanguage = (lng: string) => {
-    i18n.changeLanguage(lng);
-  };
-
-  const handleImageUpload = async (file: File) => {
+  // AI ခွဲခြမ်းစိတ်ဖြာမှု လုပ်ဆောင်ချက်
+  const handleAction = async (file?: File) => {
     setIsLoading(true);
-    // AI Processing logic goes here
     setTimeout(() => {
-      // t('Summary') စသည်ဖြင့် သုံးထားသောကြောင့် ဘာသာစကားလိုက်ပြောင်းပါမည်
-      setSummary(`### ${t(activeMode)} Result\n\nAI မှ ${t(activeMode)} ပုံစံဖြင့် ခွဲခြမ်းစိတ်ဖြာပေးထားသော ရလဒ် ဤနေရာတွင် ပေါ်လာပါမည်။`);
+      setSummary(`### ${t(activeMode)} Result\n\nAI analysis completed using ${i18n.language.toUpperCase()} interface.`);
       setIsLoading(false);
-      toast({ title: "Completed", description: `${t(activeMode)} process successful.` });
-    }, 2500);
+    }, 2000);
   };
-
-  // ဘာသာစကားအလိုက် ပြောင်းလဲမည့် modes စာရင်း
-  const modes = [
-    { id: "Summary", label: t("Summary"), icon: <BookOpen className="w-4 h-4" /> },
-    { id: "Solution", label: t("Solution"), icon: <Search className="w-4 h-4" /> },
-    { id: "Explanation", label: t("Explanation"), icon: <MessageCircle className="w-4 h-4" /> },
-    { id: "Theory", label: t("Theory"), icon: <FileText className="w-4 h-4" /> },
-  ];
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
       
-      {/* --- ဘာသာစကားရွေးချယ်မှုအပိုင်း (Language Switcher) --- */}
-      <div className="container mx-auto px-4 pt-6 flex justify-end items-center gap-2">
-        <Globe className="w-4 h-4 text-slate-500" />
-        <select 
-          className="text-sm border-none bg-transparent font-medium text-slate-600 focus:ring-0 cursor-pointer"
-          onChange={(e) => changeLanguage(e.target.value)}
-          value={i18n.language}
-        >
-          <option value="en">English</option>
-          <option value="mm">မြန်မာ</option>
-          <option value="zh">中文</option>
-          <option value="ja">日本語</option>
-          <option value="ko">한국어</option>
-          <option value="fr">Français</option>
-          <option value="es">Español</option>
-        </select>
-      </div>
-      {/* ------------------------------------------- */}
-
-      <main className="container mx-auto px-4 py-12 max-w-4xl space-y-10">
-        <div className="text-center space-y-4">
-          {/* t('app_title') စသည်ဖြင့် i18n ဖိုင်ထဲမှ စာသားများကို လှမ်းယူပါမည် */}
-          <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">
-            {t('app_title') || "AI Study Assistant"}
-          </h2>
-          <p className="text-slate-500 text-lg font-medium">
-            {t('choose_action') || "ဘာလုပ်ဆောင်လိုသလဲ ရွေးချယ်ပေးပါ"}
-          </p>
+      <main className="container mx-auto px-4 py-6 max-w-4xl space-y-8">
+        {/* Language Selection Bar */}
+        <div className="flex justify-end items-center gap-3 bg-white p-3 rounded-2xl shadow-sm border border-slate-100">
+          <Globe className="w-4 h-4 text-indigo-600" />
+          <select 
+            className="text-sm bg-transparent border-none focus:ring-0 cursor-pointer font-medium"
+            onChange={(e) => i18n.changeLanguage(e.target.value)}
+            value={i18n.language}
+          >
+            <option value="en">English</option>
+            <option value="mm">မြန်မာ</option>
+            <option value="zh">中文</option>
+            <option value="ja">日本語</option>
+            <option value="ko">한국어</option>
+            <option value="th">ไทย</option>
+            <option value="hi">हिन्दी</option>
+          </select>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-3">
-          {modes.map((m) => (
+        {/* AI Modes Selector */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {["summary", "solution", "explanation", "theory"].map((mode) => (
             <Button
-              key={m.id}
-              variant={activeMode === m.id ? "default" : "secondary"}
-              onClick={() => setActiveMode(m.id)}
-              className={`rounded-full px-8 py-6 text-md font-bold transition-all ${
-                activeMode === m.id ? "bg-indigo-600 shadow-indigo-200 shadow-xl scale-105" : "hover:bg-slate-200"
-              }`}
+              key={mode}
+              variant={activeMode === mode ? "default" : "outline"}
+              onClick={() => setActiveMode(mode)}
+              className="h-14 rounded-2xl font-bold transition-all hover:scale-105"
             >
-              <span className="mr-2">{m.icon}</span> {m.label}
+              {t(mode)}
             </Button>
           ))}
         </div>
 
-        <div className="bg-white p-2 rounded-[2rem] shadow-2xl shadow-slate-200">
-          <ImageUpload onUpload={handleImageUpload} isLoading={isLoading} />
+        {/* Input System */}
+        <div className="bg-white rounded-3xl p-8 shadow-xl border border-slate-100">
+          <h2 className="text-xl font-bold mb-6 text-center">{t('upload')}</h2>
+          <ImageUpload onUpload={handleAction} isLoading={isLoading} />
         </div>
 
-        {summary && <SummaryResult summary={summary} isLoading={isLoading} />}
+        {/* Result Area */}
+        <SummaryResult summary={summary} isLoading={isLoading} />
+
+        {/* Bottom Navigation for History & Settings */}
+        <div className="flex justify-center gap-10 py-6 border-t border-slate-200 mt-10">
+          <button className="flex items-center gap-2 text-slate-600 hover:text-indigo-600 font-medium">
+            <History className="w-5 h-5" /> {t('history')}
+          </button>
+          <button className="flex items-center gap-2 text-slate-600 hover:text-indigo-600 font-medium">
+            <Settings className="w-5 h-5" /> {t('settings')}
+          </button>
+        </div>
       </main>
     </div>
   );
