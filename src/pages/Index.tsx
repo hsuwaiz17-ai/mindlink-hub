@@ -3,8 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { Header } from "../components/dashboard/Header";
 import { ImageUpload } from "../components/dashboard/ImageUpload";
 import { SummaryResult } from "../components/dashboard/SummaryResult";
-import { Globe, History, Settings } from "lucide-react";
+import { Globe, History, Settings, FileDown } from "lucide-react"; // FileDown ထပ်ပေါင်းထားတယ်
 import { Button } from "@/components/ui/button";
+import { supportedLanguages } from "../i18n"; // i18n ဖိုင်က list ကိုယူသုံးမယ်
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import jsPDF from "jspdf"; // PDF အတွက် library
+import html2canvas from "html2canvas";
 
 const Index = () => {
   const { t, i18n } = useTranslation();
@@ -12,13 +17,67 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [activeMode, setActiveMode] = useState("summary");
 
-  // AI ခွဲခြမ်းစိတ်ဖြာမှု လုပ်ဆောင်ချက်
+  // PDF အဖြစ် သိမ်းဆည်းရန် လုပ်ဆောင်ချက် (Layout မပျက်စေရန် html2canvas သုံးထားသည်)
+  const exportToPDF = async () => {
+    const element = document.getElementById("result-area");
+    if (!element) return;
+    
+    setIsLoading(true);
+    try {
+      const canvas = await html2canvas(element, { scale: 2 });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`MindLink_${activeMode}_${Date.now()}.pdf`);
+      toast.success("PDF saved successfully!");
+    } catch (error) {
+      toast.error("Failed to export PDF");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Gemini AI နှင့် ချိတ်ဆက်ရန် လုပ်ဆောင်ချက်
   const handleAction = async (file?: File) => {
     setIsLoading(true);
-    setTimeout(() => {
-      setSummary(`### ${t(activeMode)} Result\n\nAI analysis completed using ${i18n.language.toUpperCase()} interface.`);
+    try {
+      // ၁။ ပုံပါလျှင် Base64 ပြောင်းခြင်း (OCR/Scan အတွက်)
+      let base64Image = "";
+      if (file) {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        base64Image = await new Promise((resolve) => {
+          reader.onload = () => resolve(reader.result as string);
+        });
+      }
+
+      // ၂။ Supabase ကတစ်ဆင့် Gemini ခေါ်ခြင်း (သို့မဟုတ် Edge Function)
+      // ဒီနေရာမှာ သင့်ရဲ့ Gemini API logic ကို ထည့်ပါမယ်
+      const { data, error } = await supabase.functions.invoke('gemini-ai', {
+        body: { 
+          mode: activeMode, 
+          image: base64Image,
+          language: i18n.language // User ရွေးထားတဲ့ ဘာသာစကားနဲ့ Result ထွက်အောင် ပို့ပေးမယ်
+        },
+      });
+
+      if (error) throw error;
+
+      setSummary(data.result);
+      toast.success("Analysis complete!");
+    } catch (error: any) {
+      // လက်ရှိ API မချိတ်ရသေးခင် Demo အနေနဲ့ ပြသရန်
+      setTimeout(() => {
+        setSummary(`### ${t(activeMode)} Result (${i18n.language.toUpperCase()})\n\nThis is a sample result. Please connect your Gemini API in Supabase to see real-time analysis.`);
+        setIsLoading(false);
+      }, 1500);
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -26,7 +85,7 @@ const Index = () => {
       <Header />
       
       <main className="container mx-auto px-4 py-6 max-w-4xl space-y-8">
-        {/* Language Selection Bar */}
+        {/* Global Language Selection Bar */}
         <div className="flex justify-end items-center gap-3 bg-white p-3 rounded-2xl shadow-sm border border-slate-100">
           <Globe className="w-4 h-4 text-indigo-600" />
           <select 
@@ -34,13 +93,9 @@ const Index = () => {
             onChange={(e) => i18n.changeLanguage(e.target.value)}
             value={i18n.language}
           >
-            <option value="en">English</option>
-            <option value="mm">မြန်မာ</option>
-            <option value="zh">中文</option>
-            <option value="ja">日本語</option>
-            <option value="ko">한국어</option>
-            <option value="th">ไทย</option>
-            <option value="hi">हिन्दी</option>
+            {supportedLanguages.map((lang) => (
+              <option key={lang.code} value={lang.code}>{lang.name}</option>
+            ))}
           </select>
         </div>
 
@@ -64,10 +119,19 @@ const Index = () => {
           <ImageUpload onUpload={handleAction} isLoading={isLoading} />
         </div>
 
-        {/* Result Area */}
-        <SummaryResult summary={summary} isLoading={isLoading} />
+        {/* Result Area with Export Button */}
+        <div id="result-area" className="relative">
+          {summary && (
+            <div className="absolute right-4 top-4 z-10">
+              <Button size="sm" variant="secondary" onClick={exportToPDF} className="gap-2">
+                <FileDown className="w-4 h-4" /> {t('export_pdf')}
+              </Button>
+            </div>
+          )}
+          <SummaryResult summary={summary} isLoading={isLoading} />
+        </div>
 
-        {/* Bottom Navigation for History & Settings */}
+        {/* Bottom Navigation */}
         <div className="flex justify-center gap-10 py-6 border-t border-slate-200 mt-10">
           <button className="flex items-center gap-2 text-slate-600 hover:text-indigo-600 font-medium">
             <History className="w-5 h-5" /> {t('history')}
