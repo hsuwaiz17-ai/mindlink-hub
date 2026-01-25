@@ -3,11 +3,13 @@
   "appName": "MindLink",
   "bundledWebRuntime": false,
   "npmClient": "npm",
-  "webDir": "www",
+  "webDir": "dist",
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 0
     }
   },
-  "cordova": {}
+  "server": {
+    "androidScheme": "https"
+  }
 }
