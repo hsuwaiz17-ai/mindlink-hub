@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Mail, Lock, ArrowLeft } from "lucide-react"; // ArrowLeft ထပ်ပေါင်းထားတယ်
+import { Loader2, Mail, Lock, ArrowLeft, Eye, EyeOff } from "lucide-react"; 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/form";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client"; // Supabase client တိုက်ရိုက်ခေါ်သုံးဖို့
+import { supabase } from "@/integrations/supabase/client";
 
 const authSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -27,114 +27,74 @@ type AuthFormData = z.infer<typeof authSchema>;
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
-  const [isForgotPassword, setIsForgotPassword] = useState(false); // Forgot Password state အသစ်
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // Password toggle state
   const navigate = useNavigate();
   const { user, signInWithEmail, signUpWithEmail } = useAuth();
 
   const form = useForm<AuthFormData>({
     resolver: zodResolver(authSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
+    defaultValues: { email: "", password: "" },
   });
 
   useEffect(() => {
     if (user) { navigate("/"); }
   }, [user, navigate]);
 
-  // Forgot Password လုပ်ဆောင်ချက်
-  const handleForgotPassword = async (email: string) => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth?type=recovery`,
-      });
-      if (error) throw error;
-      toast.success("Password reset link sent to your email!");
-      setIsForgotPassword(false);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to send reset link");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const onSubmit = async (data: AuthFormData) => {
-    if (isForgotPassword) {
-      handleForgotPassword(data.email);
-      return;
-    }
-
     setIsLoading(true);
     try {
-      if (isSignUp) {
+      if (isForgotPassword) {
+        const { error } = await supabase.auth.resetPasswordForEmail(data.email);
+        if (error) throw error;
+        toast.success("Reset link sent!");
+      } else if (isSignUp) {
         const { error } = await signUpWithEmail(data.email, data.password!);
-        if (error) {
-          toast.error(error.message.includes("already registered") 
-            ? "This email is already registered." 
-            : error.message);
-        } else {
-          toast.success("Account created! Please check your email.");
-        }
+        if (error) throw error;
+        toast.success("Check your email to confirm!");
       } else {
         const { error } = await signInWithEmail(data.email, data.password!);
-        if (error) {
-          toast.error(error.message.includes("Invalid login credentials") 
-            ? "Invalid email or password." 
-            : error.message);
-        } else {
-          toast.success("Welcome back!");
-          navigate("/");
-        }
+        if (error) throw error;
+        toast.success("Welcome back!");
       }
-    } catch (error) {
-      toast.error("An unexpected error occurred.");
+    } catch (error: any) {
+      toast.error(error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-1/2 -right-1/2 h-full w-full rounded-full bg-primary/5 blur-3xl" />
-        <div className="absolute -bottom-1/2 -left-1/2 h-full w-full rounded-full bg-accent/10 blur-3xl" />
-      </div>
-
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="flex justify-center mb-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-              <span className="text-2xl font-bold text-primary-foreground">M</span>
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">MindLink</h1>
+        <div className="text-center mb-8">
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 shadow-lg mb-4">
+            <span className="text-3xl font-bold text-white">M</span>
           </div>
+          <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">MindLink</h1>
         </div>
 
-        <div className="glass-card rounded-2xl p-8">
-          <h2 className="text-2xl font-semibold text-foreground text-center mb-2">
-            {isForgotPassword ? "Reset Password" : isSignUp ? "Create an account" : "Welcome back"}
+        <div className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-100">
+          <h2 className="text-2xl font-bold text-slate-800 text-center mb-2">
+            {isForgotPassword ? "Reset Password" : isSignUp ? "Create Account" : "Welcome To MindLink"}
           </h2>
-          <p className="text-muted-foreground text-center mb-6">
-            {isForgotPassword 
-              ? "Enter your email to receive a reset link" 
-              : isSignUp ? "Sign up to start summarizing content" : "Sign in to continue to MindLink"}
+          <p className="text-slate-500 text-center mb-6">
+            {isSignUp ? "Join us today" : "Your AI-powered knowledge hub"}
           </p>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel className="text-slate-700 font-medium">Email Address</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="you@example.com" className="pl-10" {...field} />
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                        <Input placeholder="name@email.com" className="pl-11 h-12 rounded-xl border-slate-200 focus:border-indigo-500" {...field} />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -142,28 +102,23 @@ const Auth = () => {
                 )}
               />
 
-              {!isForgotPassword && ( // Password field ကို Forgot Password mode မှာ ဖျောက်ထားမယ်
+              {!isForgotPassword && (
                 <FormField
                   control={form.control}
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex justify-between items-center">
-                        <FormLabel>Password</FormLabel>
-                        {!isSignUp && (
-                          <button
-                            type="button"
-                            onClick={() => setIsForgotPassword(true)}
-                            className="text-xs text-primary hover:underline"
-                          >
-                            Forgot?
-                          </button>
-                        )}
+                      <div className="flex justify-between">
+                        <FormLabel className="text-slate-700 font-medium">Password</FormLabel>
+                        <button type="button" onClick={() => setIsForgotPassword(true)} className="text-xs text-indigo-600 font-semibold hover:underline">Forgot?</button>
                       </div>
                       <FormControl>
                         <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input type="password" placeholder="••••••••" className="pl-10" {...field} />
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                          <Input type={showPassword ? "text" : "password"} placeholder="••••••••" className="pl-11 pr-11 h-12 rounded-xl border-slate-200" {...field} />
+                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600">
+                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -172,39 +127,16 @@ const Auth = () => {
                 />
               )}
 
-              <Button type="submit" className="w-full h-11" disabled={isLoading}>
-                {isLoading ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
-                ) : isForgotPassword ? (
-                  "Send Reset Link"
-                ) : isSignUp ? (
-                  "Create account"
-                ) : (
-                  "Sign in"
-                )}
+              <Button type="submit" className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-lg font-bold transition-all shadow-md" disabled={isLoading}>
+                {isLoading ? <Loader2 className="animate-spin" /> : (isSignUp ? "Sign Up" : "Sign In")}
               </Button>
             </form>
           </Form>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            {isForgotPassword ? (
-              <button 
-                onClick={() => setIsForgotPassword(false)} 
-                className="flex items-center gap-2 mx-auto text-primary hover:underline"
-              >
-                <ArrowLeft className="h-4 w-4" /> Back to Sign In
-              </button>
-            ) : (
-              <>
-                {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
-                <button
-                  onClick={() => setIsSignUp(!isSignUp)}
-                  className="font-medium text-primary hover:underline"
-                >
-                  {isSignUp ? "Sign in" : "Sign up"}
-                </button>
-              </>
-            )}
+          <div className="mt-8 text-center">
+            <button onClick={() => { setIsSignUp(!isSignUp); setIsForgotPassword(false); }} className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">
+              {isSignUp ? "Already have an account? Sign In" : "New to MindLink? Create an account"}
+            </button>
           </div>
         </div>
       </div>
