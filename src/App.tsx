@@ -1,98 +1,41 @@
-import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "next-themes";
-import ProtectedRoute from "./components/ProtectedRoute";
+import Index from "./pages/Index";
+import Auth from "./pages/Auth";
+import History from "./pages/History";
+import Settings from "./pages/Settings";
+import NotFound from "./pages/NotFound";
 
-// Pages with Dynamic Imports for Performance
-const Index = lazy(() => import("./pages/Index"));
-const Auth = lazy(() => import("./pages/Auth"));
-const Settings = lazy(() => import("./pages/Settings"));
-const ProfilePage = lazy(() => import("./pages/ProfilePage"));
-const HistoryPage = lazy(() => import("./pages/HistoryPage"));
-const TermsOfService = lazy(() => import("./pages/TermsOfService"));
-const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-
-// Query Client setup to avoid re-renders
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-
-// Optimized Page Loader
-const PageLoader = () => (
-  <div className="flex h-screen w-full items-center justify-center bg-background">
-    <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent shadow-md"></div>
-  </div>
-);
+// React Query အတွက် client သတ်မှတ်ခြင်း
+const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <TooltipProvider>
-        <BrowserRouter>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              {/* Home Route */}
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <Index />
-                  </ProtectedRoute>
-                }
-              />
-
-              {/* Authentication */}
-              <Route path="/auth" element={<Auth />} />
-
-              {/* Private Routes */}
-              <Route
-                path="/settings"
-                element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <ProfilePage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/history"
-                element={
-                  <ProtectedRoute>
-                    <HistoryPage />
-                  </ProtectedRoute>
-                }
-              />
-
-              {/* Static Pages */}
-              <Route path="/terms-of-service" element={<TermsOfService />} />
-              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-
-              {/* 404 Page */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-        <Toaster />
-        <Sonner />
-      </TooltipProvider>
-    </ThemeProvider>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          {/* Dashboard (ပင်မစာမျက်နှာ) */}
+          <Route path="/" element={<Index />} />
+          
+          {/* Login/Register စာမျက်နှာ */}
+          <Route path="/auth" element={<Auth />} />
+          
+          {/* History (မှတ်တမ်း) စာမျက်နှာ */}
+          <Route path="/history" element={<History />} />
+          
+          {/* Settings (ဆက်တင်) စာမျက်နှာ */}
+          <Route path="/settings" element={<Settings />} />
+          
+          {/* လမ်းကြောင်းမှားလျှင် 404 ပြရန် */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
   </QueryClientProvider>
 );
 
