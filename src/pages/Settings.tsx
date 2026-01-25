@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Moon, Sun, Monitor, Type, Globe, FileText, Shield, Trash2, UserX, Lock } from "lucide-react";
+import { useTranslation } from 'react-i18next'; // i18n သုံးဖို့
+import { ArrowLeft, Moon, Sun, Monitor, Type, Globe, Shield, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -26,27 +27,21 @@ import { useUserSettings } from "@/hooks/useUserSettings";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { supportedLanguages } from "../i18n"; // i18n.ts က language list ကို ယူသုံးမယ်
 
 const FONT_SIZES = [
-  { value: "small", label: "Small" },
-  { value: "medium", label: "Medium" },
-  { value: "large", label: "Large" },
-];
-
-const APP_LANGUAGES = [
-  { value: "en", label: "English" },
-  { value: "my", label: "Myanmar" },
-  { value: "ko", label: "Korean" },
-  { value: "ja", label: "Japanese" },
-  { value: "zh", label: "Chinese" },
+  { value: "text-sm", label: "Small" },
+  { value: "text-base", label: "Medium" },
+  { value: "text-lg", label: "Large" },
+  { value: "text-xl", label: "Extra Large" },
 ];
 
 const Settings = () => {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { settings, updateSettings, clearHistory, deleteAccount } = useUserSettings();
+  const { settings, updateSettings, clearHistory } = useUserSettings();
   const { theme, setTheme } = useTheme();
   const [isClearing, setIsClearing] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
@@ -58,6 +53,21 @@ const Settings = () => {
     };
     getUser();
   }, []);
+
+  // ဘာသာစကားပြောင်းလဲခြင်း
+  const handleLanguageChange = (langCode: string) => {
+    i18n.changeLanguage(langCode);
+    updateSettings({ language: langCode });
+    toast.success(`Language changed to ${langCode.toUpperCase()}`);
+  };
+
+  // စာလုံးအရွယ်အစား ပြောင်းလဲခြင်း
+  const handleFontSizeChange = (size: string) => {
+    updateSettings({ fontSize: size });
+    // HTML tag မှာ class အနေနဲ့ ထည့်ပေးခြင်းဖြင့် App တစ်ခုလုံးကို သက်ရောက်စေမယ်
+    document.documentElement.className = `${theme} ${size}`;
+    toast.success("Font size updated");
+  };
 
   const handleUpdatePassword = async () => {
     if (newPassword.length < 6) {
@@ -75,61 +85,14 @@ const Settings = () => {
     }
   };
 
-  const handleThemeChange = (newTheme: string) => {
-    setTheme(newTheme);
-    updateSettings({ theme: newTheme });
-  };
-
-  const handleFontSizeChange = (fontSize: string) => {
-    updateSettings({ fontSize });
-    document.documentElement.setAttribute("data-font-size", fontSize);
-  };
-
-  const handleLanguageChange = (language: string) => {
-    updateSettings({ language });
-  };
-
-  const handleClearHistory = async () => {
-    setIsClearing(true);
-    const result = await clearHistory();
-    setIsClearing(false);
-    
-    if (result.success) {
-      toast.success("History cleared successfully");
-    } else {
-      toast.error("Failed to clear history");
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    setIsDeleting(true);
-    const result = await deleteAccount();
-    setIsDeleting(false);
-    
-    if (result.success) {
-      toast.success("Account deleted successfully");
-      navigate("/auth");
-    } else {
-      toast.error("Failed to delete account");
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
-      {/* Header */}
+    <div className="min-h-screen bg-background text-foreground transition-all duration-300">
       <header className="sticky top-0 z-50 w-full border-b border-border bg-card/80 backdrop-blur-sm">
         <div className="container mx-auto flex h-16 items-center gap-4 px-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/")}
-            className="shrink-0"
-          >
+          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-semibold tracking-tight">
-            Settings
-          </h1>
+          <h1 className="text-xl font-semibold tracking-tight">{t('settings')}</h1>
         </div>
       </header>
 
@@ -140,67 +103,70 @@ const Settings = () => {
             <Sun className="h-5 w-5 text-primary" />
             Appearance
           </h2>
-          <div className="glass-card rounded-xl p-4 space-y-4 border border-border">
+          <div className="glass-card rounded-xl p-4 space-y-4 border border-border bg-card">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <Label>Theme</Label>
-                <p className="text-sm text-muted-foreground">Choose your color mode</p>
+                <p className="text-sm text-muted-foreground">Dark & Light mode toggle</p>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant={theme === "light" ? "default" : "outline"} size="sm" onClick={() => handleThemeChange("light")}>
+                <Button variant={theme === "light" ? "default" : "outline"} size="sm" onClick={() => setTheme("light")}>
                   <Sun className="h-4 w-4 mr-1" /> Light
                 </Button>
-                <Button variant={theme === "dark" ? "default" : "outline"} size="sm" onClick={() => handleThemeChange("dark")}>
+                <Button variant={theme === "dark" ? "default" : "outline"} size="sm" onClick={() => setTheme("dark")}>
                   <Moon className="h-4 w-4 mr-1" /> Dark
-                </Button>
-                <Button variant={theme === "system" ? "default" : "outline"} size="sm" onClick={() => handleThemeChange("system")}>
-                  <Monitor className="h-4 w-4 mr-1" /> System
                 </Button>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Accessibility & Preferences */}
+        {/* Preferences Section */}
         <section className="space-y-4">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Type className="h-5 w-5 text-primary" />
             Preferences
           </h2>
-          <div className="glass-card rounded-xl p-4 space-y-4 border border-border">
+          <div className="glass-card rounded-xl p-4 space-y-4 border border-border bg-card">
+            {/* Font Size Selector */}
             <div className="flex items-center justify-between">
               <Label>Font Size</Label>
               <Select value={settings.fontSize} onValueChange={handleFontSizeChange}>
-                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-40"><SelectValue placeholder="Select size" /></SelectTrigger>
                 <SelectContent>
                   {FONT_SIZES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Global Language Selector */}
             <div className="flex items-center justify-between border-t border-border pt-4">
-              <Label>Language</Label>
-              <Select value={settings.language} onValueChange={handleLanguageChange}>
-                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-primary" />
+                <Label>App Language</Label>
+              </div>
+              <Select value={i18n.language} onValueChange={handleLanguageChange}>
+                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {APP_LANGUAGES.map(l => <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>)}
+                  {supportedLanguages.map(l => (
+                    <SelectItem key={l.code} value={l.code}>{l.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
         </section>
 
-        {/* Privacy & Security */}
+        {/* Security Section */}
         <section className="space-y-4">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
-            Privacy & Security
+            Security
           </h2>
-          <div className="glass-card rounded-xl p-4 space-y-6 border border-border">
+          <div className="glass-card rounded-xl p-4 space-y-6 border border-border bg-card">
             <div className="space-y-2">
               <Label>Account Email</Label>
-              <div className="p-3 border rounded-lg bg-muted/50 font-mono text-sm">
-                {userEmail || "Loading..."}
-              </div>
+              <div className="p-3 border rounded-lg bg-muted/50 font-mono text-sm">{userEmail || "..."}</div>
             </div>
 
             <div className="space-y-3 border-t border-border pt-4">
@@ -216,21 +182,22 @@ const Settings = () => {
               </Button>
             </div>
 
-            <div className="flex items-center justify-between border-t border-border pt-4 text-destructive">
+            {/* Clear History */}
+            <div className="flex items-center justify-between border-t border-border pt-4">
               <div className="space-y-0.5">
-                <Label>Clear History</Label>
-                <p className="text-xs text-muted-foreground">Permanently delete documents</p>
+                <Label className="text-destructive">Clear All History</Label>
+                <p className="text-xs text-muted-foreground">This action cannot be undone</p>
               </div>
               <AlertDialog>
-                <AlertDialogTrigger asChild><Button variant="outline" size="sm">Clear</Button></AlertDialogTrigger>
+                <AlertDialogTrigger asChild><Button variant="outline" size="sm">Delete</Button></AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>This will delete all history data.</AlertDialogDescription>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>This will permanently clear your AI analysis history.</AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleClearHistory} className="bg-destructive text-white">Clear All</AlertDialogAction>
+                    <AlertDialogAction onClick={() => { setIsClearing(true); clearHistory(); setIsClearing(false); }} className="bg-destructive text-white">Clear All</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
@@ -240,20 +207,9 @@ const Settings = () => {
 
         {/* Ownership Footer */}
         <div className="mt-12 pt-8 border-t border-muted text-center space-y-2 mb-8">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-            Developed & Owned by
-          </p>
-          <div className="flex flex-col gap-1">
-            <p className="text-sm font-bold text-foreground">
-              Arkar Kyaw (2025-MIIT-ECE-050)
-            </p>
-            <p className="text-sm font-bold text-foreground">
-              & Hsu Wai Zin (UCSMG-25019)
-            </p>
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-4 italic">
-            © 2025 MindLink. All Rights Reserved.
-          </p>
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Developed & Owned by</p>
+          <p className="text-sm font-bold text-foreground">Arkar Kyaw & Hsu Wai Zin</p>
+          <p className="text-[10px] text-muted-foreground mt-4 italic">© 2025 MindLink. All Rights Reserved.</p>
         </div>
       </main>
     </div>
