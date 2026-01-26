@@ -47,6 +47,39 @@ export type Database = {
         }
         Relationships: []
       }
+      history: {
+        Row: {
+          created_at: string | null
+          id: string
+          input_text: string | null
+          language: string | null
+          mode: string | null
+          result_text: string | null
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          input_text?: string | null
+          language?: string | null
+          mode?: string | null
+          result_text?: string | null
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          input_text?: string | null
+          language?: string | null
+          mode?: string | null
+          result_text?: string | null
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -55,7 +88,6 @@ export type Database = {
           id: string
           updated_at: string | null
           username: string | null
-          website: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -64,7 +96,6 @@ export type Database = {
           id: string
           updated_at?: string | null
           username?: string | null
-          website?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -73,7 +104,6 @@ export type Database = {
           id?: string
           updated_at?: string | null
           username?: string | null
-          website?: string | null
         }
         Relationships: []
       }
