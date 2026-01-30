@@ -290,6 +290,14 @@ const Settings = () => {
             </div>
           )}
 
+          {/* App Owners Section */}
+          <div className="text-center py-2 space-y-1">
+            <p className="text-slate-500 text-xs uppercase tracking-widest font-semibold">App Owners</p>
+            <p className="text-slate-300 text-sm font-medium">
+              Arkar Kyaw (MIIT) & Hsu Wai Zin (UCSMG)
+            </p>
+          </div>
+
           {/* Sign Out */}
           <button
             onClick={handleSignOut}
