@@ -9,6 +9,7 @@ import History from "./pages/History";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import "./i18n"; // i18n setup ကို ဒီမှာ import လုပ်ထားဖို့ လိုအပ်ပါတယ်
 
 const queryClient = new QueryClient();
 
@@ -17,7 +18,8 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      {/* future flags တွေကို ထည့်သွင်းပြီး console warning တွေကို ပိတ်လိုက်ပါတယ် */}
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
