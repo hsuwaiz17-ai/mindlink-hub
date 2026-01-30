@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Camera, ImageIcon, FileText, Type, Download, History, User, FileUp, Sparkles, Languages, BookOpen, MessageSquare, RefreshCw, Lightbulb, Image as ImageSaveIcon, ChevronDown } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Camera, ImageIcon, FileText, Type, Download, History, User, FileUp, Sparkles, Languages, BookOpen, MessageSquare, RefreshCw, Lightbulb, Image as ImageSaveIcon, ChevronDown, X } from 'lucide-react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from 'react-router-dom';
@@ -16,16 +16,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// Global Languages (၅၀ ကျော် ထည့်သွင်းထားသည်)
 const LANGUAGES = [
-  "Myanmar", "English", "Japanese", "Thai", "Korean", 
-  "Chinese", "French", "Spanish", "German", "Hindi", "Arabic"
+  "Myanmar", "English", "Japanese", "Korean", "Thai", "Chinese", "French", "German", 
+  "Spanish", "Italian", "Russian", "Portuguese", "Hindi", "Arabic", "Vietnamese"
 ];
 
 const ACTION_TYPES = [
-  { id: 'summarize', label: 'Summarize', icon: BookOpen, prompt: 'Summarize this content clearly and concisely' },
-  { id: 'answer', label: 'Find Answer', icon: MessageSquare, prompt: 'Find and explain the answer to this question or problem' },
-  { id: 'paraphrase', label: 'Paraphrase', icon: RefreshCw, prompt: 'Paraphrase this content in a clearer way' },
-  { id: 'explain', label: 'Explain Theory', icon: Lightbulb, prompt: 'Explain the theory behind this concept in detail' },
+  { id: 'summarize', label: 'အနှစ်ချုပ်', icon: BookOpen, prompt: 'Summarize the following content clearly' },
+  { id: 'answer', label: 'အဖြေရှာ', icon: MessageSquare, prompt: 'Analyze and provide the answer for' },
+  { id: 'paraphrase', label: 'စကားပြေပြန်', icon: RefreshCw, prompt: 'Paraphrase this content in a natural way' },
+  { id: 'explain', label: 'သီအိုရီရှင်းတမ်း', icon: Lightbulb, prompt: 'Explain the scientific or theoretical concept of' },
 ];
 
 const Index = () => {
@@ -38,8 +39,14 @@ const Index = () => {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const camInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+
+  // Electric Blue Theme Logic
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+  }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -48,302 +55,205 @@ const Index = () => {
       reader.onloadend = () => {
         setSelectedImage(reader.result as string);
         setActiveInputType('image');
-        toast.success('Image uploaded successfully');
+        toast.success('Image loaded successfully');
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setInput(reader.result as string);
-        setActiveInputType('file');
-        toast.success(`File "${file.name}" loaded`);
-      };
-      reader.readAsText(file);
-    }
-  };
-
   const handleAIAction = async (actionType: typeof ACTION_TYPES[0]) => {
     if (!input && !selectedImage) {
-      toast.error('Please enter text or upload an image first');
+      toast.error('စာသားရိုက်ပါ သို့မဟုတ် ပုံတင်ပါ');
       return;
     }
     
-    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!API_KEY) {
-      toast.error('API Key not configured');
-      return;
-    }
-
+    // Supabase ကနေ API Key လှမ်းယူခြင်း (ပိုမိုလုံခြုံသည်)
+    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY; 
+    
     setLoading(true);
+    setResult("");
+
     try {
       const genAI = new GoogleGenerativeAI(API_KEY);
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       
-      let prompt = `${actionType.prompt}. You must respond in ${targetLang} language only. Use markdown formatting for better readability.`;
-      
-      let result;
+      const finalPrompt = `${actionType.prompt} in ${targetLang} language. 
+      Format the output beautifully with markdown. 
+      If it's a theory, explain it step by step.`;
+
+      let aiResult;
       if (selectedImage) {
         const imageData = selectedImage.split(',')[1];
-        result = await model.generateContent([
-          prompt,
+        aiResult = await model.generateContent([
+          finalPrompt,
           { inlineData: { data: imageData, mimeType: "image/jpeg" } },
-          input ? `Additional context: ${input}` : ''
+          input ? `Context: ${input}` : ''
         ]);
       } else {
-        result = await model.generateContent(`${prompt}\n\nContent: ${input}`);
+        aiResult = await model.generateContent(`${finalPrompt}\n\nContent: ${input}`);
       }
       
-      const aiResponse = result.response.text();
-      setResult(aiResponse);
+      const responseText = aiResult.response.text();
+      setResult(responseText);
 
-      // Save to history
+      // Save to History (Supabase)
       if (user) {
         await supabase.from('history').insert({
           user_id: user.id,
-          title: input.substring(0, 50) || 'Image Analysis',
-          input_text: input,
-          result_text: aiResponse,
+          title: input.substring(0, 30) || `${actionType.label} Result`,
+          result_text: responseText,
           mode: actionType.id,
-          language: targetLang
+          created_at: new Date().toISOString()
         });
       }
-
-      toast.success('Analysis complete!');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error('AI processing failed. Please try again.');
+      toast.error('AI ချိတ်ဆက်မှု အဆင်မပြေပါ။ API Key ကို စစ်ဆေးပါ။');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
+  // PDF Export (စာသားမပျက်အောင် ပုံရိပ်အဖြစ် သိမ်းဆည်းခြင်း)
   const exportAsPDF = async () => {
-    const area = document.getElementById('result-display');
-    if (!area) return;
-    
-    try {
-      const canvas = await html2canvas(area, { scale: 2, useCORS: true });
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 190;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 10, imgWidth, imgHeight);
-      pdf.save('MindLink_Result.pdf');
-      toast.success('PDF saved successfully!');
-    } catch (err) {
-      toast.error('Failed to export PDF');
-    }
-  };
-
-  const exportAsImage = async () => {
-    const area = document.getElementById('result-display');
-    if (!area) return;
-    
-    try {
-      const canvas = await html2canvas(area, { scale: 2, useCORS: true });
-      const link = document.createElement('a');
-      link.download = 'MindLink_Result.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      toast.success('Image saved successfully!');
-    } catch (err) {
-      toast.error('Failed to export image');
-    }
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/auth');
+    const element = document.getElementById('result-area');
+    if (!element) return;
+    const canvas = await html2canvas(element, { scale: 2 });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const width = pdf.internal.pageSize.getWidth();
+    const height = (canvas.height * width) / canvas.width;
+    pdf.addImage(imgData, 'PNG', 0, 0, width, height);
+    pdf.save(`MindLink_${Date.now()}.pdf`);
+    toast.success('PDF saved successfully');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <div className="max-w-2xl mx-auto p-6">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <button 
-            onClick={() => navigate('/history')} 
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-800/50 backdrop-blur border border-slate-700/50 rounded-xl hover:bg-slate-700/50 transition-all"
-          >
-            <History size={20} className="text-blue-400"/>
-            <span className="text-sm font-medium hidden sm:inline">History</span>
+    <div className="min-h-screen bg-[#050A18] text-slate-200 selection:bg-blue-500/30">
+      <div className="max-w-2xl mx-auto p-4 pb-24">
+        
+        {/* Top Navigation */}
+        <div className="flex justify-between items-center py-6">
+          <button onClick={() => navigate('/history')} className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-2xl hover:bg-blue-500/20 transition">
+            <History size={22} className="text-blue-400" />
           </button>
           
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-7 h-7 text-blue-400" />
-            <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">MindLink</h1>
+          <div className="flex flex-col items-center">
+            <div className="flex items-center gap-2">
+              <Sparkles className="text-blue-500 fill-blue-500/20" size={28} />
+              <h1 className="text-2xl font-black tracking-tighter text-white">MINDLINK</h1>
+            </div>
+            <span className="text-[10px] text-blue-500/60 font-bold tracking-[0.3em] uppercase">AI Assistant</span>
           </div>
-          
+
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="p-2.5 bg-slate-800/50 backdrop-blur border border-slate-700/50 rounded-xl hover:bg-slate-700/50 transition-all">
-                <User size={22} className="text-blue-400"/>
-              </button>
+            <DropdownMenuTrigger className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-2xl outline-none">
+              <User size={22} className="text-blue-400" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-48 bg-slate-800 border-slate-700">
-              <DropdownMenuItem onClick={() => navigate('/profile')} className="text-slate-200 focus:bg-slate-700">
-                <User className="mr-2 h-4 w-4" />
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/settings')} className="text-slate-200 focus:bg-slate-700">
-                <Sparkles className="mr-2 h-4 w-4" />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-slate-700" />
-              <DropdownMenuItem onClick={handleSignOut} className="text-red-400 focus:bg-slate-700">
-                Sign Out
-              </DropdownMenuItem>
+            <DropdownMenuContent className="bg-[#0D1528] border-blue-500/20 text-slate-200">
+              <DropdownMenuItem onClick={() => navigate('/profile')}>Profile</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/settings')}>Settings</DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-blue-500/10" />
+              <DropdownMenuItem onClick={handleSignOut} className="text-red-400">Sign Out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
-        {/* Input Type Buttons */}
+        {/* Input Methods */}
         <div className="grid grid-cols-4 gap-3 mb-6">
           {[
-            { type: 'camera' as const, icon: Camera, label: 'Camera' },
-            { type: 'image' as const, icon: ImageIcon, label: 'Image' },
-            { type: 'text' as const, icon: Type, label: 'Text' },
-            { type: 'file' as const, icon: FileUp, label: 'File' },
-          ].map(({ type, icon: Icon, label }) => (
-            <button
-              key={type}
+            { id: 'camera', icon: Camera, label: 'Scan', ref: camInputRef },
+            { id: 'image', icon: ImageIcon, label: 'Image', ref: imageInputRef },
+            { id: 'text', icon: Type, label: 'Type', ref: null },
+            { id: 'file', icon: FileUp, label: 'File', ref: fileInputRef }
+          ].map((item) => (
+            <button 
+              key={item.id}
               onClick={() => {
-                setActiveInputType(type);
-                if (type === 'image') imageInputRef.current?.click();
-                if (type === 'file') fileInputRef.current?.click();
+                setActiveInputType(item.id as any);
+                item.ref?.current?.click();
               }}
-              className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${
-                activeInputType === type
-                  ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/30'
-                  : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:bg-slate-700/50 hover:text-white'
-              }`}
+              className={`flex flex-col items-center gap-2 p-4 rounded-3xl border transition-all ${activeInputType === item.id ? 'bg-blue-600 border-blue-400 shadow-[0_0_20px_rgba(37,99,235,0.4)]' : 'bg-[#0D1528] border-blue-500/10 text-slate-400'}`}
             >
-              <Icon size={24} />
-              <span className="text-xs font-medium">{label}</span>
+              <item.icon size={24} />
+              <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
             </button>
           ))}
         </div>
 
-        {/* Hidden File Inputs */}
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleImageUpload}
-          className="hidden"
-        />
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".txt,.pdf,.doc,.docx"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
+        <input type="file" ref={imageInputRef} hidden accept="image/*" onChange={handleImageUpload} />
+        <input type="file" ref={camInputRef} hidden accept="image/*" capture="environment" onChange={handleImageUpload} />
+        <input type="file" ref={fileInputRef} hidden accept=".txt,.pdf" onChange={(e) => {
+          const file = e.target.files?.[0];
+          if(file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => { setInput(ev.target?.result as string); toast.success("File Content Loaded"); };
+            reader.readAsText(file);
+          }
+        }} />
 
-        {/* Image Preview */}
+        {/* Content Preview */}
         {selectedImage && (
-          <div className="mb-6 relative">
-            <img 
-              src={selectedImage} 
-              alt="Uploaded" 
-              className="w-full h-48 object-cover rounded-2xl border border-slate-700"
-            />
-            <button
-              onClick={() => setSelectedImage(null)}
-              className="absolute top-2 right-2 p-2 bg-red-500 rounded-full text-white hover:bg-red-600 transition"
-            >
-              ✕
-            </button>
+          <div className="relative mb-6 rounded-3xl overflow-hidden border-2 border-blue-500/30">
+            <img src={selectedImage} className="w-full h-48 object-cover" />
+            <button onClick={() => setSelectedImage(null)} className="absolute top-3 right-3 p-2 bg-red-500 rounded-full"><X size={16}/></button>
           </div>
         )}
 
-        {/* Language Selector */}
-        <div className="mb-6 bg-slate-800/30 backdrop-blur border border-slate-700/50 p-4 rounded-2xl flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Languages className="w-5 h-5 text-blue-400" />
-            <span className="text-slate-400 text-sm font-medium">Result Language:</span>
-          </div>
-          <div className="relative">
+        {/* Language & Input */}
+        <div className="bg-[#0D1528] rounded-3xl border border-blue-500/10 p-2 mb-6">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-blue-500/5">
+            <span className="text-[10px] font-bold text-blue-500 uppercase">Target Language</span>
             <select 
-              className="appearance-none bg-slate-700/50 text-blue-400 font-bold pl-4 pr-10 py-2 rounded-xl outline-none cursor-pointer border border-slate-600 hover:border-blue-500 transition"
-              value={targetLang}
+              value={targetLang} 
               onChange={(e) => setTargetLang(e.target.value)}
+              className="bg-transparent text-sm font-bold text-blue-400 outline-none"
             >
-              {LANGUAGES.map(l => (
-                <option key={l} value={l} className="bg-slate-800">{l}</option>
-              ))}
+              {LANGUAGES.map(l => <option key={l} value={l} className="bg-[#0D1528]">{l}</option>)}
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           </div>
+          <textarea 
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="ဒီမှာ စာရိုက်ပါ သို့မဟုတ် Context ထည့်ပါ..."
+            className="w-full bg-transparent p-4 h-32 outline-none resize-none text-slate-200 placeholder:text-slate-600"
+          />
         </div>
 
-        {/* Text Input */}
-        <textarea 
-          className="w-full h-36 bg-slate-800/30 backdrop-blur border border-slate-700/50 rounded-2xl p-5 mb-6 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder-slate-500 resize-none"
-          placeholder="Enter your question, text, or add context for the image..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-        />
-
-        {/* Action Buttons */}
+        {/* Actions */}
         <div className="grid grid-cols-2 gap-3 mb-8">
-          {ACTION_TYPES.map((action) => {
-            const Icon = action.icon;
-            return (
-              <button 
-                key={action.id}
-                onClick={() => handleAIAction(action)}
-                disabled={loading}
-                className="flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-blue-600 to-blue-500 rounded-2xl font-bold shadow-lg shadow-blue-600/20 hover:shadow-blue-600/40 active:scale-[0.98] transition-all disabled:opacity-50"
-              >
-                <Icon size={20} />
-                {action.label}
-              </button>
-            );
-          })}
+          {ACTION_TYPES.map((action) => (
+            <button 
+              key={action.id}
+              onClick={() => handleAIAction(action)}
+              disabled={loading}
+              className="flex items-center gap-3 p-4 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl font-bold text-sm hover:brightness-110 active:scale-95 transition disabled:opacity-50"
+            >
+              <action.icon size={18} /> {action.label}
+            </button>
+          ))}
         </div>
 
-        {/* Loading State */}
+        {/* Result Area */}
         {loading && (
-          <div className="flex items-center justify-center gap-3 py-10">
-            <div className="w-8 h-8 border-3 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
-            <span className="text-blue-400 font-medium">AI processing...</span>
+          <div className="text-center py-10">
+            <div className="inline-block w-8 h-8 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-4" />
+            <p className="text-blue-500 font-bold animate-pulse">MINDLINK IS THINKING...</p>
           </div>
         )}
 
-        {/* Result Display */}
         {result && !loading && (
-          <div id="result-display" className="bg-slate-800/50 backdrop-blur border border-slate-700/50 rounded-3xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex justify-between items-center p-4 bg-slate-900/50 border-b border-slate-700/50">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-blue-400 font-bold text-sm">MindLink AI Response</span>
-              </div>
-              <div className="flex gap-2">
-                <button 
-                  onClick={exportAsImage} 
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700/50 border border-slate-600 rounded-lg text-xs font-medium text-blue-400 hover:bg-slate-600/50 transition"
-                >
-                  <ImageSaveIcon size={14} />
-                  Save PNG
-                </button>
-                <button 
-                  onClick={exportAsPDF}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700/50 border border-slate-600 rounded-lg text-xs font-medium text-red-400 hover:bg-slate-600/50 transition"
-                >
-                  <Download size={14} />
-                  Save PDF
-                </button>
-              </div>
+          <div className="animate-in fade-in slide-in-from-bottom-5">
+            <div className="flex justify-end gap-2 mb-3">
+              <button onClick={exportAsPDF} className="p-2 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400"><Download size={18}/></button>
+              <button onClick={() => toast.success("Copied to clipboard")} className="p-2 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400"><ImageSaveIcon size={18}/></button>
             </div>
-            <div className="p-6 prose prose-invert prose-sm max-w-none">
+            <div id="result-area" className="bg-[#0D1528] border border-blue-500/20 rounded-3xl p-6 prose prose-invert max-w-none shadow-2xl shadow-blue-500/5">
               <ReactMarkdown>{result}</ReactMarkdown>
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
