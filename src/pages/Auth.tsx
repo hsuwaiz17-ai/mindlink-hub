@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Sparkles, Mail, Lock, ChevronRight } from 'lucide-react';
+import { Eye, EyeOff, Sparkles, Mail, Lock, ChevronRight, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client'; // Supabase တိုက်ရိုက်ခေါ်ဖို့
 import { toast } from 'sonner';
 
 const Auth = () => {
@@ -33,7 +34,7 @@ const Auth = () => {
       if (isSignUp) {
         const { error } = await signUpWithEmail(email, password);
         if (error) throw error;
-        toast.success('အကောင့်ဖွင့်ခြင်း အောင်မြင်ပါသည်။ Email ကို စစ်ဆေးပေးပါ။');
+        toast.success('အကောင့်ဖွင့်ခြင်း အောင်မြင်ပါသည်။ Email တွင် Confirm လုပ်ပေးပါ။');
       } else {
         const { error } = await signInWithEmail(email, password);
         if (error) throw error;
@@ -41,7 +42,11 @@ const Auth = () => {
         navigate('/');
       }
     } catch (error: any) {
-      toast.error(error.message || 'ဝင်ရောက်မှု မအောင်မြင်ပါ');
+      // Supabase error messages တွေကို ပိုဖတ်လို့ကောင်းအောင် လုပ်ခြင်း
+      const message = error.message === "Invalid login credentials" 
+        ? "Email သို့မဟုတ် Password မှားယွင်းနေပါသည်" 
+        : error.message;
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -52,35 +57,47 @@ const Auth = () => {
       toast.error('Email အရင်ရိုက်ထည့်ပေးပါ');
       return;
     }
-    // Supabase Forgot Password Logic
-    toast.info('Password ပြန်လည်သတ်မှတ်ရန် link ကို email သို့ ပို့ပေးလိုက်ပါပြီ');
+    
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth?type=recovery`,
+    });
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.info('Password ပြန်လည်သတ်မှတ်ရန် link ကို email သို့ ပို့ပေးလိုက်ပါပြီ');
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#050A18] flex items-center justify-center p-6 selection:bg-blue-500/30">
+    <div className="min-h-screen bg-[#050A18] flex items-center justify-center p-6 selection:bg-blue-500/30 font-sans">
       <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
         
         {/* Welcome Header */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-[2rem] mb-6 shadow-[0_0_30px_rgba(37,99,235,0.4)] rotate-12 hover:rotate-0 transition-transform duration-500">
-            <Sparkles className="w-10 h-10 text-white fill-white/20" />
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-[2rem] mb-6 shadow-[0_0_30px_rgba(37,99,235,0.4)] rotate-12 hover:rotate-0 transition-transform duration-500 group">
+            <Sparkles className="w-10 h-10 text-white fill-white/20 group-hover:animate-pulse" />
           </div>
           <h1 className="text-4xl font-black tracking-tighter text-white mb-2">
-            Welcome from <span className="text-blue-500">MindLink</span>
+            MindLink <span className="text-blue-500">AI</span>
           </h1>
-          <p className="text-slate-500 font-medium">သင့်ရဲ့ AI အဖော်မွန် MindLink မှ ကြိုဆိုပါတယ်</p>
+          <p className="text-slate-500 font-medium italic">"Empowering your thoughts with Intelligence"</p>
         </div>
 
         {/* Auth Card */}
-        <div className="bg-[#0D1528]/80 backdrop-blur-2xl border border-blue-500/10 rounded-[2.5rem] p-8 shadow-2xl">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            
+        <div className="bg-[#0D1528]/80 backdrop-blur-2xl border border-blue-500/10 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
+          {/* Decorative background glow */}
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 blur-[80px] rounded-full" />
+          
+          <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
+            {/* Email Input */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-blue-500/60 uppercase tracking-widest ml-1">Email Address</label>
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
                 <input
                   type="email"
+                  required
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -89,12 +106,14 @@ const Auth = () => {
               </div>
             </div>
 
+            {/* Password Input */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-blue-500/60 uppercase tracking-widest ml-1">Password</label>
               <div className="relative group">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  required
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -111,21 +130,25 @@ const Auth = () => {
             </div>
 
             {isSignUp && (
-              <div className="space-y-1.5 animate-in slide-in-from-top-2">
+              <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
                 <label className="text-xs font-bold text-blue-500/60 uppercase tracking-widest ml-1">Confirm Password</label>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-6 py-4 bg-[#050A18]/50 border border-blue-500/5 rounded-2xl text-white outline-none focus:border-blue-500 transition-all"
-                />
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-[#050A18]/50 border border-blue-500/5 rounded-2xl text-white outline-none focus:border-blue-500 transition-all"
+                  />
+                </div>
               </div>
             )}
 
             {!isSignUp && (
               <div className="text-right">
-                <button type="button" onClick={handleForgotPassword} className="text-xs font-bold text-blue-500 hover:text-blue-400 uppercase tracking-tighter">
+                <button type="button" onClick={handleForgotPassword} className="text-[10px] font-black text-blue-500/80 hover:text-blue-400 uppercase tracking-widest transition-colors">
                   Forgot Password?
                 </button>
               </div>
@@ -134,10 +157,16 @@ const Auth = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl shadow-[0_10px_20px_rgba(37,99,235,0.2)] hover:shadow-[0_10px_25px_rgba(37,99,235,0.4)] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl shadow-[0_10px_20px_rgba(37,99,235,0.2)] hover:shadow-[0_10px_25px_rgba(37,99,235,0.4)] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 group"
             >
-              {loading ? "PROCESSING..." : isSignUp ? "CREATE ACCOUNT" : "SIGN IN"}
-              {!loading && <ChevronRight size={18} />}
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  {isSignUp ? "CREATE ACCOUNT" : "SIGN IN"}
+                  <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </button>
           </form>
 
@@ -149,9 +178,14 @@ const Auth = () => {
 
           <button
             onClick={() => signInWithGoogle()}
-            className="w-full py-4 bg-white/5 border border-white/5 text-white font-bold rounded-2xl hover:bg-white/10 transition-all flex items-center justify-center gap-3"
+            className="w-full py-4 bg-[#ffffff05] border border-white/5 text-white font-bold rounded-2xl hover:bg-white/10 transition-all flex items-center justify-center gap-3"
           >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="google" />
+            <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
+              <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            </svg>
             Continue with Google
           </button>
 
@@ -169,7 +203,7 @@ const Auth = () => {
         </div>
 
         <p className="text-center text-slate-700 text-[10px] font-bold uppercase tracking-[0.2em] mt-10">
-          MindLink AI Assistant • 2026
+          MindLink AI Assistant • Secure Authentication
         </p>
       </div>
     </div>
