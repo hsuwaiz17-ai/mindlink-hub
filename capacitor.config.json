@@ -1,5 +1,5 @@
 {
-  "appId": "com.yourname.mindlink",
+  "appId": "com.mindlinkhub.app",
   "appName": "MindLink",
   "bundledWebRuntime": false,
   "npmClient": "npm",
