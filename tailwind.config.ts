@@ -2,7 +2,12 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -13,6 +18,26 @@ export default {
       },
     },
     extend: {
+      // မင်းရဲ့ SummaryResult မှာ သုံးထားတဲ့ prose class အတွက် Typography setting
+      typography: {
+        DEFAULT: {
+          css: {
+            maxWidth: '100%',
+            color: 'inherit',
+            'h1, h2, h3, h4': {
+              color: 'hsl(var(--foreground))',
+              'font-weight': '700',
+            },
+            a: {
+              color: 'hsl(var(--primary))',
+              '&:hover': {
+                color: 'hsl(var(--primary))',
+                opacity: 0.8,
+              },
+            },
+          },
+        },
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -66,6 +91,8 @@ export default {
       boxShadow: {
         'card': '0 1px 3px 0 hsl(var(--shadow-card) / 0.05), 0 1px 2px -1px hsl(var(--shadow-card) / 0.05)',
         'card-hover': '0 10px 25px -5px hsl(var(--shadow-card) / 0.1), 0 8px 10px -6px hsl(var(--shadow-card) / 0.08)',
+        // Glassmorphism အတွက် shadow အသစ်
+        'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -74,20 +101,16 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        // AI Loading ပြတဲ့အခါ သုံးဖို့ Pulse Effect
+        "shimmer": {
+          "100%": { transform: "translateX(100%)" },
         },
       },
       animation: {
@@ -96,5 +119,8 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    require("@tailwindcss/typography"), // Summary စာသားတွေ လှပဖို့အတွက် မရှိမဖြစ်!
+  ],
 } satisfies Config;
