@@ -58,7 +58,7 @@ const Auth = () => {
     setForgotPasswordLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth?type=recovery`,
+        redirectTo: `${window.location.origin}/auth/callback`,
       });
 
       if (error) {
@@ -76,13 +76,23 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      const { error } = await signInWithGoogle();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      });
       if (error) {
         toast.error('Google အကောင့်ဖြင့် ဝင်ရောက်ရာတွင် အမှားတစ်ခုဖြစ်နေပါသည်။');
+        console.error('Google OAuth Error:', error);
       }
-      // Supabase will handle the OAuth redirect automatically
     } catch (error: any) {
       toast.error('Google sign in failed. Please try again.');
+      console.error('Google sign in error:', error);
     } finally {
       setGoogleLoading(false);
     }
