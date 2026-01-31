@@ -43,6 +43,11 @@ const Index = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
 
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth'); // Redirect to auth page after sign out
+  };
+
   // Electric Blue Theme Logic
   useEffect(() => {
     document.documentElement.classList.add('dark');
@@ -78,8 +83,10 @@ const Index = () => {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       
       const finalPrompt = `${actionType.prompt} in ${targetLang} language. 
-      Format the output beautifully with markdown. 
+      Format the output beautifully with markdown.
       If it's a theory, explain it step by step.`;
+
+      console.log("DEBUG: Final Prompt sent to AI:", finalPrompt); // <-- ADDED LOG
 
       let aiResult;
       if (selectedImage) {
@@ -94,8 +101,9 @@ const Index = () => {
       }
       
       const responseText = aiResult.response.text();
+      console.log("DEBUG: Raw AI Response Text:", responseText); // <-- ADDED LOG
       setResult(responseText);
-
+  
       // Save to History (Supabase)
       if (user) {
         await supabase.from('history').insert({
