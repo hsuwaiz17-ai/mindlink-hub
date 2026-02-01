@@ -1,230 +1,83 @@
-import React, { useState, useRef } from "react";
-import { Textarea } from "@/components/ui/textarea";
+import { useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { 
-  FileText, 
-  Camera, 
-  Upload, 
-  X,
-  Image as ImageIcon 
-} from "lucide-react";
-import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 
-interface ContentInputProps {
-  content: string;
-  onContentChange: (content: string) => void;
-  onImagesSelected?: (files: File[]) => void;
+interface Props {
+  onTextSubmit: (text: string) => void;
+  onImageSubmit: (file: File) => void;
+  onFileSubmit: (file: File) => void;
 }
 
-type InputMode = "text" | "scan" | "upload";
-
-const ContentInput = ({
-  content,
-  onContentChange,
-  onImagesSelected,
-}: ContentInputProps) => {
-  const [activeMode, setActiveMode] = useState<InputMode>("text");
-  const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-    isCamera: boolean
-  ) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const newFiles = Array.from(files);
-
-    // Check if all files are images
-    const invalidFile = newFiles.find(
-      (file) => !file.type.startsWith("image/")
-    );
-    if (invalidFile) {
-      toast.error("Please select image files only");
-      return;
-    }
-
-    try {
-      // Read all images concurrently and get preview URLs
-      const previewPromises = newFiles.map((file) => {
-        return new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      });
-
-      const newImagePreviews = await Promise.all(previewPromises);
-
-      // Update states
-      setSelectedImages((prev) => [...prev, ...newImagePreviews]);
-      onImagesSelected?.(newFiles);
-
-      // Keep scan mode if camera, otherwise switch to upload mode
-      setActiveMode(isCamera ? "scan" : "upload");
-    } catch (error) {
-      console.error("Error reading files:", error);
-      toast.error("Failed to process some images");
-    } finally {
-      // Reset input to allow re-selecting the same file
-      e.target.value = "";
-    }
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleClearAll = () => {
-    setSelectedImages([]);
-    onContentChange("");
-  };
-
-  const modes = [
-    {
-      id: "text" as InputMode,
-      label: "Type Content",
-      icon: FileText,
-    },
-    {
-      id: "scan" as InputMode,
-      label: "Scan Document",
-      icon: Camera,
-    },
-    {
-      id: "upload" as InputMode,
-      label: "Upload Image",
-      icon: Upload,
-    },
-  ];
+export default function ContentInput({
+  onTextSubmit,
+  onImageSubmit,
+  onFileSubmit,
+}: Props) {
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const imageRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="glass-card rounded-2xl p-6 space-y-4">
-      {/* Mode Toggle Buttons */}
-      <div className="flex flex-wrap gap-2">
-        {modes.map((mode) => (
-          <Button
-            key={mode.id}
-            variant={activeMode === mode.id ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveMode(mode.id)}
-            className="gap-2"
-          >
-            <mode.icon className="h-4 w-4" />
-            {mode.label}
-          </Button>
-        ))}
-      </div>
+    <div className="space-y-4">
+      {/* Text Input */}
+      <Textarea
+        ref={textRef}
+        placeholder="စာသားရေးပါ..."
+        rows={5}
+      />
 
-      {/* Text Input Mode */}
-      {activeMode === "text" && (
-        <div className="space-y-2">
-          <Textarea
-            placeholder="Paste or type your content here..."
-            value={content}
-            onChange={(e) => onContentChange(e.target.value)}
-            className="min-h-[200px] resize-none bg-background/50"
-          />
-          <p className="text-xs text-muted-foreground text-right">
-            {content.length} characters
-          </p>
-        </div>
-      )}
+      <Button
+        className="w-full"
+        onClick={() => {
+          if (textRef.current?.value) {
+            onTextSubmit(textRef.current.value);
+          }
+        }}
+      >
+        စာသားတင်မယ်
+      </Button>
 
-      {/* Scan Mode - Camera with capture="environment" for mobile */}
-      {activeMode === "scan" && (
-        <div className="space-y-4">
-          <div
-            className="border-2 border-dashed border-muted-foreground/30 rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => cameraInputRef.current?.click()}
-          >
-            <Camera className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground mb-2">
-              Tap to open camera and scan document
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Supports multiple images
-            </p>
-          </div>
-          <input
-            ref={cameraInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            multiple
-            onChange={(e) => handleFileChange(e, true)}
-            className="hidden"
-          />
-        </div>
-      )}
+      {/* Image */}
+      <input
+        type="file"
+        ref={imageRef}
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          if (e.target.files?.[0]) {
+            onImageSubmit(e.target.files[0]);
+          }
+        }}
+      />
 
-      {/* Upload Mode */}
-      {activeMode === "upload" && (
-        <div className="space-y-4">
-          <div
-            className="border-2 border-dashed border-muted-foreground/30 rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <ImageIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground mb-2">
-              Click to select images from gallery
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Supports multiple images (PNG, JPG, WEBP)
-            </p>
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={(e) => handleFileChange(e, false)}
-            className="hidden"
-          />
-        </div>
-      )}
+      <Button
+        variant="outline"
+        className="w-full"
+        onClick={() => imageRef.current?.click()}
+      >
+        Image တင်မယ်
+      </Button>
 
-      {/* Image Preview Grid */}
-      {selectedImages.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-foreground">
-              Selected Images ({selectedImages.length})
-            </p>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearAll}
-              className="text-destructive hover:text-destructive"
-            >
-              <X className="h-4 w-4 mr-1" />
-              Clear All
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {selectedImages.map((src, index) => (
-              <div key={index} className="relative group aspect-square">
-                <img
-                  src={src}
-                  alt={`Preview ${index + 1}`}
-                  className="w-full h-full object-cover rounded-lg border border-border"
-                />
-                <button
-                  onClick={() => handleRemoveImage(index)}
-                  className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* File */}
+      <input
+        type="file"
+        ref={fileRef}
+        accept=".pdf,.doc,.docx,.txt"
+        hidden
+        onChange={(e) => {
+          if (e.target.files?.[0]) {
+            onFileSubmit(e.target.files[0]);
+          }
+        }}
+      />
+
+      <Button
+        variant="outline"
+        className="w-full"
+        onClick={() => fileRef.current?.click()}
+      >
+        File တင်မယ်
+      </Button>
     </div>
   );
-};
-
-export default ContentInput;
+}
