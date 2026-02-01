@@ -8,40 +8,21 @@ const AuthCallback = () => {
 
   useEffect(() => {
     const handleAuthCallback = async () => {
-      try {
-        // Get the session from URL hash
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Auth callback error:', error);
-          navigate('/auth?error=oauth_failed');
-          return;
-        }
-
-        if (session) {
-          // Successful login
-          navigate('/');
-        } else {
-          // No session found, redirect to login
-          navigate('/auth');
-        }
-      } catch (error) {
-        console.error('Unexpected error:', error);
-        navigate('/auth');
+      const { data, error } = await supabase.auth.getSession();
+      if (data?.session) {
+        navigate('/'); // Login အောင်မြင်ရင် Dashboard သွားမယ်
+      } else {
+        navigate('/auth'); // မအောင်မြင်ရင် Auth ပြန်သွားမယ်
       }
     };
-
     handleAuthCallback();
   }, [navigate]);
 
   return (
     <div className="min-h-screen bg-[#050A18] flex items-center justify-center">
-      <div className="text-center">
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-[2rem] mb-6">
-          <Loader2 className="w-10 h-10 text-white animate-spin" />
-        </div>
-        <h2 className="text-xl font-bold text-white mb-2">Processing Authentication...</h2>
-        <p className="text-slate-500">Please wait while we complete your sign in.</p>
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+        <p className="text-white font-medium">Authenticating MindLink...</p>
       </div>
     </div>
   );
