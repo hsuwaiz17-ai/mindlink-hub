@@ -1,83 +1,33 @@
-import { useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/lib/supabase";
 
-interface Props {
-  onTextSubmit: (text: string) => void;
-  onImageSubmit: (file: File) => void;
-  onFileSubmit: (file: File) => void;
+export type AiTask =
+  | "summary"
+  | "answer"
+  | "paraphrase"
+  | "theory";
+
+interface RunAiParams {
+  content: string;
+  task: AiTask;
+  language: string;
 }
 
-export default function ContentInput({
-  onTextSubmit,
-  onImageSubmit,
-  onFileSubmit,
-}: Props) {
-  const textRef = useRef<HTMLTextAreaElement>(null);
-  const imageRef = useRef<HTMLInputElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+export async function runAi({
+  content,
+  task,
+  language,
+}: RunAiParams): Promise<string> {
+  const { data, error } = await supabase.functions.invoke("gemini-ai", {
+    body: {
+      content,
+      task,
+      language,
+    },
+  });
 
-  return (
-    <div className="space-y-4">
-      {/* Text Input */}
-      <Textarea
-        ref={textRef}
-        placeholder="စာသားရေးပါ..."
-        rows={5}
-      />
+  if (error) {
+    throw new Error(error.message);
+  }
 
-      <Button
-        className="w-full"
-        onClick={() => {
-          if (textRef.current?.value) {
-            onTextSubmit(textRef.current.value);
-          }
-        }}
-      >
-        စာသားတင်မယ်
-      </Button>
-
-      {/* Image */}
-      <input
-        type="file"
-        ref={imageRef}
-        accept="image/*"
-        hidden
-        onChange={(e) => {
-          if (e.target.files?.[0]) {
-            onImageSubmit(e.target.files[0]);
-          }
-        }}
-      />
-
-      <Button
-        variant="outline"
-        className="w-full"
-        onClick={() => imageRef.current?.click()}
-      >
-        Image တင်မယ်
-      </Button>
-
-      {/* File */}
-      <input
-        type="file"
-        ref={fileRef}
-        accept=".pdf,.doc,.docx,.txt"
-        hidden
-        onChange={(e) => {
-          if (e.target.files?.[0]) {
-            onFileSubmit(e.target.files[0]);
-          }
-        }}
-      />
-
-      <Button
-        variant="outline"
-        className="w-full"
-        onClick={() => fileRef.current?.click()}
-      >
-        File တင်မယ်
-      </Button>
-    </div>
-  );
+  return data.result as string;
 }
