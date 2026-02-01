@@ -9,21 +9,21 @@ export const useAuth = () => {
   const [authLoading, setAuthLoading] = useState(false);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    // THEN check for existing session
+    // Session ကို အရင်စစ်မယ်
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
+
+    // Auth state ပြောင်းလဲမှုကို နားထောင်မယ်
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    );
 
     return () => subscription.unsubscribe();
   }, []);
@@ -31,11 +31,7 @@ export const useAuth = () => {
   const signInWithEmail = async (email: string, password: string) => {
     setAuthLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      return { data, error };
+      return await supabase.auth.signInWithPassword({ email, password });
     } finally {
       setAuthLoading(false);
     }
@@ -44,73 +40,11 @@ export const useAuth = () => {
   const signUpWithEmail = async (email: string, password: string) => {
     setAuthLoading(true);
     try {
-      const redirectUrl = `${window.location.origin}/`;
-      const { data, error } = await supabase.auth.signUp({
+      return await supabase.auth.signUp({
         email,
         password,
-        options: {
-          emailRedirectTo: redirectUrl,
-        },
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
       });
-      return { data, error };
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const signInWithGoogle = async () => {
-    setAuthLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
-      });
-      return { data, error };
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const signInWithGitHub = async () => {
-    setAuthLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "github",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-      return { data, error };
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const resetPassword = async (email: string) => {
-    setAuthLoading(true);
-    try {
-      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
-      });
-      return { data, error };
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const updatePassword = async (newPassword: string) => {
-    setAuthLoading(true);
-    try {
-      const { data, error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-      return { data, error };
     } finally {
       setAuthLoading(false);
     }
@@ -120,10 +54,18 @@ export const useAuth = () => {
     setAuthLoading(true);
     try {
       const { error } = await supabase.auth.signOut();
+      if (!error) {
+        window.location.href = '/auth'; // Clear state and redirect
+      }
       return { error };
     } finally {
       setAuthLoading(false);
     }
+  };
+
+  // Profile Update အတွက် ကြိုတင်ပြင်ဆင်မှု (နောင်မှာသုံးရန်)
+  const updateProfile = async (updates: any) => {
+    return await supabase.auth.updateUser(updates);
   };
 
   return {
@@ -133,10 +75,7 @@ export const useAuth = () => {
     authLoading,
     signInWithEmail,
     signUpWithEmail,
-    signInWithGoogle,
-    signInWithGitHub,
-    resetPassword,
-    updatePassword,
     signOut,
+    updateProfile
   };
 };
